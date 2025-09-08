@@ -57,7 +57,7 @@ function AttendanceForm() {
     try {
       console.log('Fetching attendance status for email:', email);
       const response = await fetch(
-        `http://localhost:5000/api/attendance?email=${encodeURIComponent(email)}`
+        `https://attendance-leave-project.onrender.com/api/attendance?email=${encodeURIComponent(email)}`
       );
       if (!response.ok) {
         throw new Error(`Failed to fetch attendance records: ${response.statusText}`);
@@ -413,7 +413,7 @@ function AttendanceForm() {
         image: imageBase64,
       };
 
-      const response = await fetch("http://localhost:5000/api/attendance-Form", {
+      const response = await fetch("https://attendance-leave-project.onrender.com/api/attendance-Form", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

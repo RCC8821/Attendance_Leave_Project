@@ -13,7 +13,7 @@ const AttendanceData = () => {
   useEffect(() => {
     const fetchAttendanceData = async () => {
       try {
-        const response = await fetch("https://final-attendance-leave-dashboard.onrender.com/api/getAttendance-Data", {
+        const response = await fetch("https://attendance-leave-project.onrender.com/api/getAttendance-Data", {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });
@@ -49,7 +49,7 @@ const AttendanceData = () => {
         attendanceId: selectedEntry?.attendanceId,
         remarks,
       };
-      const response = await fetch("https://final-attendance-leave-dashboard.onrender.com/api/updateAttendance", {
+      const response = await fetch("https://attendance-leave-project.onrender.com/api/updateAttendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -57,7 +57,7 @@ const AttendanceData = () => {
       if (!response.ok) {
         throw new Error((await response.json()).error || "Update failed");
       }
-      const refreshedResponse = await fetch("https://final-attendance-leave-dashboard.onrender.com/api/getAttendance-Data", {
+      const refreshedResponse = await fetch("https://attendance-leave-project.onrender.com/api/getAttendance-Data", {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });

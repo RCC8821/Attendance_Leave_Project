@@ -142,7 +142,7 @@ const LeaveApplicationForm = () => {
     setErrorMessage("");
 
     try {
-      const response = await fetch("https://final-attendance-leave-dashboard.onrender.com/api/leave-form", {
+      const response = await fetch("https://attendance-leave-project.onrender.com/api/leave-form", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
