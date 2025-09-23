@@ -1,9 +1,10 @@
-const express = require('express');
-const { google } = require('googleapis');
-const dotenv = require('dotenv');
+const express = require("express");
+const { google } = require("googleapis");
+const dotenv = require("dotenv");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const path = require("path");
+const { error } = require("console");
 // Load environment variables from .env file
 dotenv.config();
 const cloudinary = require("cloudinary").v2;
@@ -15,17 +16,29 @@ app.use(express.json());
 
 // Check if all required environment variables are set
 const requiredEnvVars = [
-  'GOOGLE_TYPE', 'GOOGLE_PROJECT_ID', 'GOOGLE_PRIVATE_KEY_ID', 'GOOGLE_PRIVATE_KEY',
-  'GOOGLE_CLIENT_EMAIL', 'GOOGLE_CLIENT_ID', 'GOOGLE_AUTH_URI', 'GOOGLE_TOKEN_URI',
-  'GOOGLE_AUTH_PROVIDER_X509_CERT_URL', 'GOOGLE_CLIENT_X509_CERT_URL', 'GOOGLE_UNIVERSE_DOMAIN',
-  'SPREADSHEET_ID', 'PORT', "CLOUDINARY_CLOUD_NAME",
+  "GOOGLE_TYPE",
+  "GOOGLE_PROJECT_ID",
+  "GOOGLE_PRIVATE_KEY_ID",
+  "GOOGLE_PRIVATE_KEY",
+  "GOOGLE_CLIENT_EMAIL",
+  "GOOGLE_CLIENT_ID",
+  "GOOGLE_AUTH_URI",
+  "GOOGLE_TOKEN_URI",
+  "GOOGLE_AUTH_PROVIDER_X509_CERT_URL",
+  "GOOGLE_CLIENT_X509_CERT_URL",
+  "GOOGLE_UNIVERSE_DOMAIN",
+  "SPREADSHEET_ID",
+  "PORT",
+  "CLOUDINARY_CLOUD_NAME",
   "CLOUDINARY_API_KEY",
   "CLOUDINARY_API_SECRET",
   "JWT_SECRET",
 ];
-const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+const missingEnvVars = requiredEnvVars.filter(
+  (varName) => !process.env[varName]
+);
 if (missingEnvVars.length > 0) {
-  console.error('Missing environment variables:', missingEnvVars);
+  console.error("Missing environment variables:", missingEnvVars);
   process.exit(1);
 }
 
@@ -34,7 +47,9 @@ const credentials = {
   type: process.env.GOOGLE_TYPE,
   project_id: process.env.GOOGLE_PROJECT_ID,
   private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
-  private_key: process.env.GOOGLE_PRIVATE_KEY ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n') : '',
+  private_key: process.env.GOOGLE_PRIVATE_KEY
+    ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n")
+    : "",
   client_email: process.env.GOOGLE_CLIENT_EMAIL,
   client_id: process.env.GOOGLE_CLIENT_ID,
   auth_uri: process.env.GOOGLE_AUTH_URI,
@@ -46,18 +61,85 @@ const credentials = {
 
 const auth = new google.auth.GoogleAuth({
   credentials,
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 
-const sheets = google.sheets({ version: 'v4', auth });
+const sheets = google.sheets({ version: "v4", auth });
 
 // Google Sheet ID from .env
 const spreadsheetId = process.env.SPREADSHEET_ID;
- console.log(spreadsheetId)
+console.log(spreadsheetId);
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// // DropDown Users Data Api ///////////////////////////////////////////
+
+app.get("/api/DropdownUserData", async (req, res) => {
+  try {
+    // Fetch data from Google Sheet
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: process.env.SPREADSHEET_ID,
+      range: "ALL DOER NAMES RCC/DIMENSION!A:H",
+    });
+
+    const rows = response.data.values || [];
+    
+    // Check if data exists
+    if (rows.length === 0) {
+      return res.status(400).json({ error: "No data found in the sheet" });
+    }
+
+    // Get headers from first row or use fallback
+    let headers = rows[0] || [];
+    console.log("Initial headers from row 0:", headers);
+    
+    if (!headers.length || headers.some((h) => !h || h.trim() === "")) {
+      headers = [
+        "Names",
+        "EMP Code",
+        "Mobile No",
+        "Email",
+        "Leave Approval Manager",
+      ];
+      console.log("Using fallback headers:", headers);
+    } else {
+      headers = headers.map((header) => header.trim());
+      console.log("Normalized headers:", headers);
+    }
+
+    // Process rows (skip header row)
+    const data = rows.slice(1).map((row) => {
+      const rowData = {};
+      headers.forEach((header, index) => {
+        rowData[header] = row[index] ? row[index].trim() : '';
+      });
+      return rowData;
+    });
+
+    // Filter out empty rows and validate required fields
+    const filteredData = data.filter((row) => 
+      row["Names"] && row["Names"].trim() !== ''
+    );
+
+    // Return formatted response
+    res.status(200).json({
+      success: true,
+      count: filteredData.length,
+      data: filteredData
+    });
+
+  } catch (error) {
+    console.error("Error fetching data from Google Sheet:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch data from Google Sheet",
+      details: error.message
+    });
+  }
 });
 
 // Login endpoint
@@ -76,7 +158,9 @@ app.post("/api/login", async (req, res) => {
     }
 
     // Skip header row and find user by email and password
-    const user = rows.slice(1).find((row) => row[0] === email && row[1] === password);
+    const user = rows
+      .slice(1)
+      .find((row) => row[0] === email && row[1] === password);
 
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
@@ -84,7 +168,14 @@ app.post("/api/login", async (req, res) => {
 
     // Get user type from column C (index 2)
     const userType = user[2]; // 'Admin' or 'Employee'
-    if (!["Admin", "Ravindra Singh", "Lt Col Mayank Sharma (Retd)", "Subhash Patidar"].includes(userType)) {
+    if (
+      ![
+        "Admin",
+        "Ravindra Singh",
+        "Lt Col Mayank Sharma (Retd)",
+        "Subhash Patidar",
+      ].includes(userType)
+    ) {
       return res.status(400).json({ error: "Invalid user type" });
     }
 
@@ -96,7 +187,9 @@ app.post("/api/login", async (req, res) => {
     return res.json({ token, userType });
   } catch (error) {
     console.error("Error in login:", error.message, error.stack);
-    return res.status(500).json({ error: "Server error", details: error.message });
+    return res
+      .status(500)
+      .json({ error: "Server error", details: error.message });
   }
 });
 
@@ -174,7 +267,8 @@ app.get("/api/attendance", async (req, res) => {
         entryTypeIndex,
       });
       return res.status(400).json({
-        error: "Invalid sheet structure: Email, Timestamp, or EntryType column missing",
+        error:
+          "Invalid sheet structure: Email, Timestamp, or EntryType column missing",
       });
     }
 
@@ -209,8 +303,14 @@ app.get("/api/attendance", async (req, res) => {
     console.log("Retrieved records:", formattedRecords);
     res.status(200).json(formattedRecords);
   } catch (error) {
-    console.error("Error fetching attendance records:", error.message, error.stack);
-    res.status(500).json({ error: "Internal server error", details: error.message });
+    console.error(
+      "Error fetching attendance records:",
+      error.message,
+      error.stack
+    );
+    res
+      .status(500)
+      .json({ error: "Internal server error", details: error.message });
   }
 });
 
@@ -257,7 +357,9 @@ app.post("/api/attendance-Form", async (req, res) => {
         workShift,
         locationName,
       });
-      return res.status(400).json({ error: "All required fields must be provided" });
+      return res
+        .status(400)
+        .json({ error: "All required fields must be provided" });
     }
 
     let imageUrl = null;
@@ -265,9 +367,18 @@ app.post("/api/attendance-Form", async (req, res) => {
       const fileName = `attendance_${email}_${Date.now()}`;
       imageUrl = await uploadToCloudinary(image, fileName);
     }
-
+    const formatTimestamp = (date) => {
+      const pad = (num) => String(num).padStart(2, "0");
+      const day = pad(date.getDate());
+      const month = pad(date.getMonth() + 1);
+      const year = date.getFullYear();
+      const hours = pad(date.getHours());
+      const minutes = pad(date.getMinutes());
+      const seconds = pad(date.getSeconds());
+      return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    };
     // Get current timestamp in ISO format
-    const timestamp = new Date().toISOString();
+    const timestamp = formatTimestamp(new Date());
 
     // Prepare values for Google Sheets
     const values = [
@@ -293,10 +404,14 @@ app.post("/api/attendance-Form", async (req, res) => {
       },
     });
 
-    res.status(200).json({ result: "success", message: "Attendance recorded successfully" });
+    res
+      .status(200)
+      .json({ result: "success", message: "Attendance recorded successfully" });
   } catch (error) {
     console.error("Error processing attendance:", error.message, error.stack);
-    res.status(500).json({ error: "Internal server error", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Internal server error", details: error.message });
   }
 });
 
@@ -342,7 +457,9 @@ app.get("/api/getFormData", async (req, res) => {
     console.log("Data rows (from row 2):", dataRows);
 
     if (!dataRows.length) {
-      return res.status(404).json({ error: "No data found starting from row 2" });
+      return res
+        .status(404)
+        .json({ error: "No data found starting from row 2" });
     }
 
     // Map data rows to objects
@@ -364,13 +481,21 @@ app.get("/api/getFormData", async (req, res) => {
 
     console.log("Final form data:", finalFormData);
     if (finalFormData.length === 0) {
-      return res.status(404).json({ error: "No valid data found starting from row 2" });
+      return res
+        .status(404)
+        .json({ error: "No valid data found starting from row 2" });
     }
 
     return res.json({ data: finalFormData });
   } catch (error) {
-    console.error("Error fetching data from Google Sheet:", error.message, error.stack);
-    return res.status(500).json({ error: "Server error: Failed to fetch data" });
+    console.error(
+      "Error fetching data from Google Sheet:",
+      error.message,
+      error.stack
+    );
+    return res
+      .status(500)
+      .json({ error: "Server error: Failed to fetch data" });
   }
 });
 
@@ -482,13 +607,15 @@ app.post("/api/leave-form", async (req, res) => {
     if (error.message.includes("Unable to parse range")) {
       return res.status(400).json({
         error: "Invalid spreadsheet range",
-        details: "Please ensure the sheet 'LeaveFrom' exists and the range A:K is valid",
+        details:
+          "Please ensure the sheet 'LeaveFrom' exists and the range A:K is valid",
       });
     }
     if (error.code === 403) {
       return res.status(403).json({
         error: "Permission denied",
-        details: "Ensure the service account has edit access to the spreadsheet",
+        details:
+          "Ensure the service account has edit access to the spreadsheet",
       });
     }
     res.status(500).json({
@@ -538,7 +665,9 @@ app.get("/api/getAttendance-Data", async (req, res) => {
     console.log("Data rows (from row 2):", dataRows);
 
     if (!dataRows.length) {
-      return res.status(404).json({ error: "No data found starting from row 2" });
+      return res
+        .status(404)
+        .json({ error: "No data found starting from row 2" });
     }
 
     // Map data rows to objects
@@ -560,13 +689,21 @@ app.get("/api/getAttendance-Data", async (req, res) => {
 
     console.log("Final form data:", finalFormData);
     if (finalFormData.length === 0) {
-      return res.status(404).json({ error: "No valid data found starting from row 2" });
+      return res
+        .status(404)
+        .json({ error: "No valid data found starting from row 2" });
     }
 
     return res.json({ data: finalFormData });
   } catch (error) {
-    console.error("Error fetching data from Google Sheet:", error.message, error.stack);
-    return res.status(500).json({ error: "Server error: Failed to fetch data" });
+    console.error(
+      "Error fetching data from Google Sheet:",
+      error.message,
+      error.stack
+    );
+    return res
+      .status(500)
+      .json({ error: "Server error: Failed to fetch data" });
   }
 });
 
@@ -578,16 +715,29 @@ app.post("/api/Approve-leave", async (req, res) => {
 
   // Validate input
   if (!Approved || leaveDays === undefined || !EMPCODE) {
-    console.log("Validation failed - Approved:", Approved, "leaveDays:", leaveDays, "EMPCODE:", EMPCODE);
-    return res.status(400).json({ error: "Approved, leaveDays, and EMPCODE are required" });
+    console.log(
+      "Validation failed - Approved:",
+      Approved,
+      "leaveDays:",
+      leaveDays,
+      "EMPCODE:",
+      EMPCODE
+    );
+    return res
+      .status(400)
+      .json({ error: "Approved, leaveDays, and EMPCODE are required" });
   }
   if (!["Approved", "Rejected"].includes(Approved)) {
     console.log("Invalid Approved value:", Approved);
-    return res.status(400).json({ error: "Approved must be either 'Approved' or 'Rejected'" });
+    return res
+      .status(400)
+      .json({ error: "Approved must be either 'Approved' or 'Rejected'" });
   }
   if (typeof leaveDays !== "number" || leaveDays < 0) {
     console.log("Invalid leaveDays value:", leaveDays);
-    return res.status(400).json({ error: "leaveDays must be a non-negative number" });
+    return res
+      .status(400)
+      .json({ error: "leaveDays must be a non-negative number" });
   }
 
   try {
@@ -609,13 +759,17 @@ app.post("/api/Approve-leave", async (req, res) => {
     const empCodeIndex = headerRow.indexOf("EMPCODE");
     if (empCodeIndex === -1) {
       console.log("EMPCODE column not found in header row");
-      return res.status(400).json({ error: "EMPCODE column not found in sheet" });
+      return res
+        .status(400)
+        .json({ error: "EMPCODE column not found in sheet" });
     }
 
     const dataRows = rows.slice(1);
     const rowIndex = dataRows.findIndex((row) => row[empCodeIndex] === EMPCODE);
     if (rowIndex === -1) {
-      return res.status(404).json({ error: `No matching row found for EMPCODE: ${EMPCODE}` });
+      return res
+        .status(404)
+        .json({ error: `No matching row found for EMPCODE: ${EMPCODE}` });
     }
 
     const actualRowIndex = rowIndex + 2;
@@ -626,14 +780,14 @@ app.post("/api/Approve-leave", async (req, res) => {
     updatedRow[11] = Approved; // Column L (index 11) for Approved/Rejected
     updatedRow[12] = leaveDays.toString(); // Column M (index 12) for leave days
     // Add current date and time to Column N (index 13)
-    const currentDateTime = new Date().toLocaleString("en-US", { 
+    const currentDateTime = new Date().toLocaleString("en-US", {
       timeZone: "Asia/Kolkata", // Adjust timezone as needed
-      year: 'numeric', 
-      month: '2-digit', 
-      day: '2-digit', 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit' 
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
     updatedRow[13] = currentDateTime; // Column N (index 13) for approval timestamp
     console.log("Original row:", originalRow);
@@ -650,15 +804,19 @@ app.post("/api/Approve-leave", async (req, res) => {
     console.log("Update response:", updateResponse.data);
 
     console.log("Updated row in sheet:", updatedRow);
-    return res.json({ message: "Leave status, days, and approval timestamp updated successfully" });
+    return res.json({
+      message:
+        "Leave status, days, and approval timestamp updated successfully",
+    });
   } catch (error) {
     console.error("Error in update:", error.message, error.stack);
-    return res.status(500).json({ error: "Server error", details: error.message });
+    return res
+      .status(500)
+      .json({ error: "Server error", details: error.message });
   }
 });
 
 // ///////////////////////////////////   Get Employees Data ////////////////////////////////
-
 
 app.get("/api/getEmployees", async (req, res) => {
   try {
@@ -697,7 +855,9 @@ app.get("/api/getEmployees", async (req, res) => {
       normalizedSheetHeaders.length !== headers.length ||
       !headers.every((h, i) => h === normalizedSheetHeaders[i])
     ) {
-      console.warn("Sheet headers do not match expected headers. Using predefined headers.");
+      console.warn(
+        "Sheet headers do not match expected headers. Using predefined headers."
+      );
     }
 
     // Get data rows (starting from row 2)
@@ -705,7 +865,9 @@ app.get("/api/getEmployees", async (req, res) => {
     console.log("Data rows (from row 2):", dataRows);
 
     if (!dataRows.length) {
-      return res.status(404).json({ error: "No data found starting from row 2" });
+      return res
+        .status(404)
+        .json({ error: "No data found starting from row 2" });
     }
 
     // Map data rows to objects using the predefined headers
@@ -730,17 +892,23 @@ app.get("/api/getEmployees", async (req, res) => {
     console.log("Final form data:", finalFormData);
 
     if (finalFormData.length === 0) {
-      return res.status(404).json({ error: "No valid data found starting from row 2" });
+      return res
+        .status(404)
+        .json({ error: "No valid data found starting from row 2" });
     }
 
     return res.json({ data: finalFormData });
   } catch (error) {
-    console.error("Error fetching data from Google Sheet:", error.message, error.stack);
-    return res.status(500).json({ error: "Server error: Failed to fetch data" });
+    console.error(
+      "Error fetching data from Google Sheet:",
+      error.message,
+      error.stack
+    );
+    return res
+      .status(500)
+      .json({ error: "Server error: Failed to fetch data" });
   }
 });
-
-
 
 // Start the server
 const PORT = process.env.PORT || 5000;

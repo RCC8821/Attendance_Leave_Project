@@ -9,7 +9,6 @@ import {
   X,
   Loader2,
 } from "lucide-react";
-import employees from "../assets/LeaveFromData";
 
 const LeaveApplicationForm = () => {
   const [formData, setFormData] = useState({
@@ -21,36 +20,16 @@ const LeaveApplicationForm = () => {
     fromDate: "",
     toDate: "",
     timeSlot: "",
-    department: "", // Replaced sites with department
+    department: "",
     approvalManager: "",
   });
 
   const [loading, setLoading] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-
-  const departments = [ // Replaced sites array with departments
-  "Agrawal Ji Site/अग्रवाल जी साइट",
-    "Ahuja Ji Site/आहूजा जी साइट",
-    "Chandanpura Site/चंदनपुरा साइट",
-    "Choudhary Ji Site/चौधरी जी साइट",
-    "Dr. Manish Jain Site/डॉ. मनीष जैन साइट",
-    "Dr. Shrikant Jain Site/डॉ. श्रीकांत जैन साइट",
-    "Dubey Ji Site/दुबे जी साइट",
-    "Hira Hardware/हीरा हार्डवेयर",
-    "Piyush Goenka/ पियूष गोयनका",
-    "Rajeev Abbot. Ji Site/राजीव एबोट. जी साइट",
-    "Rajesh Gupta Ji Site/राजेश गुप्‍ता जी साइट",
-    "Rana Ji Site/राणा जी साइट",
-    "Rcc Office/आरसीसी कार्यालय",
-    "RNTU/आरएनटीयू",
-    "Scope College/स्‍कॉप कॉलेज",
-    "Shahpura B-280/शाहपुरा बी-280",
-    "The Address A66/द एड्रेस",
-    "Wallia Ji App/वालिया जी अपा",
-    "Wallia Ji Commercial/वालिया जी कर्मशियल",
-    "Wallia Ji House/वालिया जी हाउस",
-  ]; // Add more departments as needed
+  const [employees, setEmployees] = useState([]);
+  const [departments, setDepartments] = useState([]);
 
   const leaveTypes = [
     "Sick leave (Illness or Injury)/बीमारी की छुट्टी (बीमारी या चोट)",
@@ -64,6 +43,46 @@ const LeaveApplicationForm = () => {
     "After Lunch Half day/लंच के बाद",
     "Full day/पूरा दिन",
   ];
+
+  // Fetch employee data from API
+  useEffect(() => {
+    const fetchEmployeeData = async () => {
+      setFetchLoading(true);
+      try {
+        const response = await fetch("http://localhost:5000/api/DropdownUserData");
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Failed to fetch employee data");
+        }
+
+        // Map API data to expected format, including site for departments
+        const formattedEmployees = data.data.map((item) => ({
+          name: item["Names"] || "",
+          empCode: item["EMP Code"] || "",
+          leaveApprovalManager: item["Leave Approval Manager"] || "",
+          site: item["Sites"] || "", // Assuming column H header is "Sites"
+        }));
+
+        setEmployees(formattedEmployees);
+
+        // Extract unique departments/sites from column H
+        const uniqueSites = [...new Set(formattedEmployees.map(emp => emp.site).filter(site => site.trim()))];
+        setDepartments(uniqueSites);
+
+        setErrorMessage("");
+      } catch (error) {
+        console.error("Error fetching employee data:", error);
+        setErrorMessage(`Failed to load employee data: ${error.message}`);
+        setEmployees([]);
+        setDepartments([]);
+      } finally {
+        setFetchLoading(false);
+      }
+    };
+
+    fetchEmployeeData();
+  }, []);
 
   // Calculate days between dates
   const calculateDays = (fromDate, toDate, timeSlot) => {
@@ -87,11 +106,15 @@ const LeaveApplicationForm = () => {
     setFormData((prev) => {
       const newData = { ...prev, [name]: value };
 
-      // Auto-fill manager and employee code when employee is selected
+      // Auto-fill empCode and approvalManager when name is selected
       if (name === "name") {
-        const selectedEmployee = employees.find((emp) => emp.name.toLowerCase() === value.toLowerCase());
+        const selectedEmployee = employees.find(
+          (emp) => emp.name.toLowerCase() === value.toLowerCase()
+        );
         newData.empCode = selectedEmployee ? selectedEmployee.empCode : "";
-        newData.approvalManager = selectedEmployee ? selectedEmployee.leaveApprovalManager : "";
+        newData.approvalManager = selectedEmployee
+          ? selectedEmployee.leaveApprovalManager
+          : "";
       }
 
       // Auto-calculate days when dates or time slot change
@@ -120,7 +143,7 @@ const LeaveApplicationForm = () => {
       "fromDate",
       "toDate",
       "timeSlot",
-      "department", // Replaced sites with department
+      "department",
     ];
     const isFormValid = requiredFields.every((field) => formData[field]);
 
@@ -142,7 +165,7 @@ const LeaveApplicationForm = () => {
     setErrorMessage("");
 
     try {
-      const response = await fetch("https://final-attendance-leave-dashboard.onrender.com/api/leave-form", {
+      const response = await fetch("http://localhost:5000/api/leave-form", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -157,7 +180,7 @@ const LeaveApplicationForm = () => {
           reason: formData.reason,
           days: formData.days,
           approvalManager: formData.approvalManager,
-          department: formData.department, // Replaced sites with department
+          department: formData.department,
         }),
       });
 
@@ -178,7 +201,7 @@ const LeaveApplicationForm = () => {
         fromDate: "",
         toDate: "",
         timeSlot: "",
-        department: "", // Replaced sites with department
+        department: "",
         approvalManager: "",
       });
       setErrorMessage("");
@@ -202,7 +225,7 @@ const LeaveApplicationForm = () => {
       fromDate: "",
       toDate: "",
       timeSlot: "",
-      department: "", // Replaced sites with department
+      department: "",
       approvalManager: "",
     });
     setErrorMessage("");
@@ -213,18 +236,22 @@ const LeaveApplicationForm = () => {
   const today = new Date().toISOString().split("T")[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-800  p-4 flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-800 p-4 flex items-center justify-center">
       <div className="w-full max-w-2xl mx-auto">
         {/* Header */}
         <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-t-2xl p-6 text-center text-white">
           <div className="flex items-center justify-center gap-3 mb-2">
-           <img src="rcc-logo.png" className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl mb-4 shadow-lg"/>
+            <img
+              src="rcc-logo.png"
+              className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl mb-4 shadow-lg"
+              alt="RCC Logo"
+            />
             <h1 className="text-2xl md:text-3xl font-bold">
               Leave Request Form
             </h1>
           </div>
           <p className="text-sm md:text-base text-blue-100">
-             Leave request कम से कम 3 दिन पहले डालना ज़रूरी है।
+            Leave request कम से कम 3 दिन पहले डालना ज़रूरी है।
             <br />
             सिर्फ emergency leave को ही same day पर approve किया जाएगा।
           </p>
@@ -232,7 +259,13 @@ const LeaveApplicationForm = () => {
 
         {/* Main Form */}
         <div className="bg-white rounded-b-2xl shadow-2xl p-6 md:p-8">
-          {/* Error Message */}
+          {/* Loading and Error Messages */}
+          {fetchLoading && (
+            <div className="mb-6 p-4 bg-blue-100 border border-blue-300 rounded-lg flex items-center gap-2 text-blue-700">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm">Loading employee and department data...</span>
+            </div>
+          )}
           {errorMessage && (
             <div className="mb-6 p-4 bg-red-100 border border-red-300 rounded-lg flex items-center gap-2 text-red-700">
               <X className="w-5 h-5 flex-shrink-0" />
@@ -255,6 +288,7 @@ const LeaveApplicationForm = () => {
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-gray-50 hover:bg-white"
                   required
                   aria-required="true"
+                  disabled={fetchLoading || employees.length === 0}
                 >
                   <option value="">Choose Employee</option>
                   {employees.map((employee) => (
@@ -407,17 +441,18 @@ const LeaveApplicationForm = () => {
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                   <MapPin className="w-4 h-4" />
-                  Department / विभाग <span className="text-red-500">*</span> // Replaced Site with Department
+                  Department / विभाग <span className="text-red-500">*</span>
                 </label>
                 <select
-                  name="department" // Replaced sites with department
+                  name="department"
                   value={formData.department}
                   onChange={handleInputChange}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-gray-50 hover:bg-white"
                   required
                   aria-required="true"
+                  disabled={fetchLoading || departments.length === 0}
                 >
-                  <option value="">Choose Department</option> // Updated label
+                  <option value="">Choose Department</option>
                   {departments.map((dept) => (
                     <option key={dept} value={dept}>
                       {dept}
@@ -447,7 +482,7 @@ const LeaveApplicationForm = () => {
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || fetchLoading}
                 className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
               >
                 {loading ? (
