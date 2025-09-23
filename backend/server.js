@@ -84,7 +84,7 @@ app.get("/api/DropdownUserData", async (req, res) => {
 
     let headers = rows[0] || [];
     if (!headers.length || headers.some((h) => !h || h.trim() === "")) {
-      headers = ["Names", "EMP Code", "Mobile No", "Email", "Leave Approval Manager"];
+      headers = ["Names", "EMP Code", "Mobile No", "Email", "Leave Approval Manager","Sites"];
     } else {
       headers = headers.map((header) => header.trim());
     }
