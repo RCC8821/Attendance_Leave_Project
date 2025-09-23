@@ -76,7 +76,7 @@ function AttendanceForm() {
 
       // Fetch from API
       const response = await fetch(
-        `http://localhost:5000/api/attendance?email=${encodeURIComponent(email)}&date=${today}`
+        `https://attendance-leave-project.onrender.com/api/attendance?email=${encodeURIComponent(email)}&date=${today}`
       );
       if (!response.ok) {
         throw new Error(`Failed to fetch attendance records: ${response.status} ${response.statusText}`);
@@ -116,7 +116,7 @@ function AttendanceForm() {
   useEffect(() => {
     const init = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/DropdownUserData");
+        const res = await fetch("https://attendance-leave-project.onrender.com/api/DropdownUserData");
         const apiData = await res.json();
 
         if (!apiData.success) {
@@ -439,7 +439,7 @@ function AttendanceForm() {
         image: imageBase64,
       };
 
-      const response = await fetch("http://localhost:5000/api/attendance-Form", {
+      const response = await fetch("https://attendance-leave-project.onrender.com/api/attendance-Form", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
