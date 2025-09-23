@@ -278,7 +278,11 @@ const Employees = () => {
     // Fetch data from the backend
     const fetchEmployees = async () => {
       try {
+<<<<<<< HEAD
         const response = await fetch("https://final-attendance-leave-dashboard.onrender.com/api/getEmployees");
+=======
+        const response = await fetch("https://attendance-leave-project.onrender.com/api/getEmployees");
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }

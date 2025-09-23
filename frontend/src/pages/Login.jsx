@@ -16,7 +16,11 @@ const Login = () => {
     setError('');
 
     try {
+<<<<<<< HEAD
       const response = await fetch('https://final-attendance-leave-dashboard.onrender.com/api/login', {
+=======
+      const response = await fetch('https://attendance-leave-project.onrender.com/api/login', {
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

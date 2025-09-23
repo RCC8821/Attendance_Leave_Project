@@ -13,7 +13,11 @@ const AttendanceData = () => {
   useEffect(() => {
     const fetchAttendanceData = async () => {
       try {
+<<<<<<< HEAD
         const response = await fetch("https://final-attendance-leave-dashboard.onrender.com/api/getAttendance-Data", {
+=======
+        const response = await fetch("https://attendance-leave-project.onrender.com/api/getAttendance-Data", {
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });
@@ -49,7 +53,11 @@ const AttendanceData = () => {
         attendanceId: selectedEntry?.attendanceId,
         remarks,
       };
+<<<<<<< HEAD
       const response = await fetch("https://final-attendance-leave-dashboard.onrender.com/api/updateAttendance", {
+=======
+      const response = await fetch("https://attendance-leave-project.onrender.com/api/updateAttendance", {
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -57,7 +65,11 @@ const AttendanceData = () => {
       if (!response.ok) {
         throw new Error((await response.json()).error || "Update failed");
       }
+<<<<<<< HEAD
       const refreshedResponse = await fetch("https://final-attendance-leave-dashboard.onrender.com/api/getAttendance-Data", {
+=======
+      const refreshedResponse = await fetch("https://attendance-leave-project.onrender.com/api/getAttendance-Data", {
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });

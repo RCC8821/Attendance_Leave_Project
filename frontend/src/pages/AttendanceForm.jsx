@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // import { useState, useEffect, useRef } from "react";
 // import { Camera, MapPin, Clock, User, Mail, Building, CheckCircle, XCircle, Loader2 } from "lucide-react";
 
@@ -1010,6 +1011,13 @@
 // export default AttendanceForm;
 import { useState, useEffect, useRef } from "react";
 import { Camera, MapPin, Clock, User, Mail, Building, CheckCircle, XCircle, Loader2 } from "lucide-react";
+=======
+import { useState, useEffect, useRef } from "react";
+import { Camera, MapPin, Clock, User, Mail, Building, Calendar, CheckCircle, XCircle, Loader2 } from "lucide-react";
+
+// Import your actual office data
+import officeData from "../assets/officeData";
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
 
 function AttendanceForm() {
   const [formData, setFormData] = useState({
@@ -1022,8 +1030,12 @@ function AttendanceForm() {
     locationName: "",
     image: null,
   });
+<<<<<<< HEAD
   const [userData, setUserData] = useState([]);
   const [filteredEmails, setFilteredEmails] = useState([]);
+=======
+  const [filteredEmails, setFilteredEmails] = useState(officeData);
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
   const [filteredSites, setFilteredSites] = useState([]);
   const [nearbyOffices, setNearbyOffices] = useState([]);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -1037,7 +1049,10 @@ function AttendanceForm() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+<<<<<<< HEAD
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+=======
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -1059,6 +1074,7 @@ function AttendanceForm() {
 
   // Load attendance status from localStorage and MongoDB
   const fetchAttendanceStatus = async (email) => {
+<<<<<<< HEAD
   // Validate email
   if (!email || typeof email !== 'string' || !userData.some((user) => user.email && user.email.toLowerCase() === email.toLowerCase())) {
     setAttendanceStatus({ hasCheckedIn: false, hasCheckedOut: false });
@@ -1203,6 +1219,84 @@ function AttendanceForm() {
     };
 
     init();
+=======
+    if (!email || !officeData.some((user) => user.email.toLowerCase() === email.toLowerCase())) {
+      setAttendanceStatus({ hasCheckedIn: false, hasCheckedOut: false });
+      return;
+    }
+    try {
+      console.log('Fetching attendance status for email:', email);
+      const response = await fetch(
+        `https://attendance-leave-project.onrender.com/api/attendance?email=${encodeURIComponent(email)}`
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to fetch attendance records: ${response.statusText}`);
+      }
+      const records = await response.json();
+      console.log("API Response:", records);
+
+      const hasCheckedIn = records.some(
+        (record) => record.entryType?.trim().toLowerCase() === "in"
+      );
+      const hasCheckedOut = records.some(
+        (record) => record.entryType?.trim().toLowerCase() === "out"
+      );
+
+      console.log("hasCheckedIn:", hasCheckedIn);
+      console.log("hasCheckedOut:", hasCheckedOut);
+
+      // Update localStorage
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem(`attendance_${email}_${today}`, JSON.stringify({
+        hasCheckedIn,
+        hasCheckedOut,
+        timestamp: new Date().getTime(),
+      }));
+
+      setAttendanceStatus({ hasCheckedIn, hasCheckedOut });
+      setErrorMessage("");
+    } catch (error) {
+      console.error("Error fetching attendance status:", error.message, error.stack);
+      setErrorMessage(`Error fetching attendance status: ${error.message}`);
+      setAttendanceStatus({ hasCheckedIn: false, hasCheckedOut: false });
+    }
+  };
+
+  // Check localStorage on mount
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const storedEmail = localStorage.getItem('userEmail');
+    const storedAttendance = localStorage.getItem(`attendance_${storedEmail}_${today}`);
+
+    if (storedEmail) {
+      const user = officeData.find((u) => u.email.toLowerCase() === storedEmail.toLowerCase());
+      if (user) {
+        setFormData((prev) => ({
+          ...prev,
+          email: user.email,
+          name: user.name,
+          empCode: user.empCode,
+        }));
+        if (storedAttendance) {
+          const { hasCheckedIn, hasCheckedOut, timestamp } = JSON.parse(storedAttendance);
+          const now = new Date().getTime();
+          if (now - timestamp < 24 * 60 * 60 * 1000) {
+            setAttendanceStatus({ hasCheckedIn, hasCheckedOut });
+          } else {
+            localStorage.removeItem(`attendance_${storedEmail}_${today}`);
+            setAttendanceStatus({ hasCheckedIn: false, hasCheckedOut: false });
+          }
+        }
+        fetchAttendanceStatus(storedEmail);
+      } else {
+        setErrorMessage("Invalid email in localStorage. Please select a valid email.");
+        localStorage.removeItem('userEmail');
+      }
+    }
+    setFilteredEmails(officeData);
+    const uniqueSites = [...new Set(officeData.map((user) => user.site))];
+    setFilteredSites(uniqueSites);
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
   }, []);
 
   useEffect(() => {
@@ -1225,7 +1319,11 @@ function AttendanceForm() {
       return;
     }
 
+<<<<<<< HEAD
     const user = userData.find((u) => u.email && u.email.toLowerCase() === email.toLowerCase());
+=======
+    const user = officeData.find((u) => u.email.toLowerCase() === email.toLowerCase());
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
     if (user) {
       setFormData((prev) => ({
         ...prev,
@@ -1239,7 +1337,10 @@ function AttendanceForm() {
         image: null,
       }));
       setFilteredEmails([]);
+<<<<<<< HEAD
       setIsDropdownOpen(false);
+=======
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
       setErrorMessage("");
       localStorage.setItem('userEmail', user.email);
       fetchAttendanceStatus(user.email);
@@ -1250,6 +1351,7 @@ function AttendanceForm() {
 
   const handleEmailSearch = (e) => {
     const searchTerm = e.target.value.toLowerCase();
+<<<<<<< HEAD
     const filtered = userData.filter(
       (user) =>
         user.email &&
@@ -1270,6 +1372,13 @@ function AttendanceForm() {
     setTimeout(() => {
       setIsDropdownOpen(false);
     }, 200);
+=======
+    const filtered = officeData.filter((user) =>
+      user.email.toLowerCase().includes(searchTerm)
+    );
+    setFilteredEmails(filtered);
+    setFormData((prev) => ({ ...prev, email: e.target.value }));
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
   };
 
   const handleSiteSelect = (site) => {
@@ -1287,7 +1396,11 @@ function AttendanceForm() {
 
   const handleSiteSearch = (e) => {
     const searchTerm = e.target.value.toLowerCase();
+<<<<<<< HEAD
     const uniqueSites = [...new Set(userData.map((user) => user.site).filter((site) => site && typeof site === 'string'))];
+=======
+    const uniqueSites = [...new Set(officeData.map((user) => user.site))];
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
     const filtered = uniqueSites.filter((site) =>
       site.toLowerCase().includes(searchTerm)
     );
@@ -1413,7 +1526,11 @@ function AttendanceForm() {
   const handleSubmit = async () => {
     setIsLoading(true);
     setErrorMessage("");
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
     const requiredFields = {
       email: "Email Address",
       name: "Name",
@@ -1438,8 +1555,13 @@ function AttendanceForm() {
       return;
     }
 
+<<<<<<< HEAD
     // Validate email against userData
     const user = userData.find((user) => user.email && user.email.toLowerCase() === formData.email.toLowerCase());
+=======
+    // Validate email against officeData
+    const user = officeData.find((user) => user.email.toLowerCase() === formData.email.toLowerCase());
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
     if (!user) {
       setErrorMessage("Invalid email. Please select a valid email from the suggestions.");
       setIsLoading(false);
@@ -1464,8 +1586,13 @@ function AttendanceForm() {
 
     // Check localStorage for attendance status
     const storedStatus = localStorage.getItem(`attendance_${formData.email}_${today}`);
+<<<<<<< HEAD
     let hasCheckedIn = attendanceStatus.hasCheckedIn;
     let hasCheckedOut = attendanceStatus.hasCheckedOut;
+=======
+    let hasCheckedIn = false;
+    let hasCheckedOut = false;
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
 
     if (storedStatus) {
       const status = JSON.parse(storedStatus);
@@ -1506,7 +1633,11 @@ function AttendanceForm() {
         image: imageBase64,
       };
 
+<<<<<<< HEAD
       const response = await fetch("http://localhost:5000/api/attendance-Form", {
+=======
+      const response = await fetch("https://attendance-leave-project.onrender.com/api/attendance-Form", {
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1520,17 +1651,31 @@ function AttendanceForm() {
 
       if (response.ok && responseData.result === "success") {
         console.log("Attendance submitted successfully");
+<<<<<<< HEAD
 
         setSuccessMessage(`Attendance ${formData.entryType === "In" ? "Check In" : "Check Out"} submitted successfully!`);
         setShowSuccess(true);
 
         // Update attendance status
+=======
+        
+        setSuccessMessage(`Attendance ${formData.entryType === "In" ? "Check In" : "Check Out"} submitted successfully!`);
+        setShowSuccess(true);
+        
+        // Hide success message after 3 seconds
+        setTimeout(() => {
+          setShowSuccess(false);
+        }, 3000);
+
+        // Update localStorage with email and entry type
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
         const newStatus = {
           hasCheckedIn: hasCheckedIn || formData.entryType === "In",
           hasCheckedOut: hasCheckedOut || formData.entryType === "Out",
           entryType: formData.entryType,
           timestamp: new Date().getTime(),
         };
+<<<<<<< HEAD
         setAttendanceStatus(newStatus);
         localStorage.setItem(`attendance_${formData.email}_${today}`, JSON.stringify(newStatus));
         localStorage.setItem('userEmail', formData.email);
@@ -1542,6 +1687,12 @@ function AttendanceForm() {
           setShowSuccess(false);
         }, 3000);
 
+=======
+        localStorage.setItem(`attendance_${formData.email}_${today}`, JSON.stringify(newStatus));
+        localStorage.setItem('userEmail', formData.email);
+
+        fetchAttendanceStatus(formData.email);
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
         setFormData({
           email: formData.email,
           name: formData.name,
@@ -1554,8 +1705,12 @@ function AttendanceForm() {
         });
         setNearbyOffices([]);
         setCapturedImage(null);
+<<<<<<< HEAD
         setFilteredEmails([]);
         setIsDropdownOpen(false);
+=======
+        setFilteredEmails(officeData);
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
         setErrorMessage("");
       } else {
         console.error("Error sending data:", responseData.error, responseData.details);
@@ -1616,16 +1771,27 @@ function AttendanceForm() {
 
         {/* Header */}
         <div className="text-center mb-8">
+<<<<<<< HEAD
           <div>
             <img src="rcc-logo.png" className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl mb-4 shadow-lg" />
           </div>
           <h1 className="text-3xl font-bold text-white">Attendance Form</h1>
           <p className="text-white mt-2">Mark your attendance with ease</p>
+=======
+          <div >
+            <img src="rcc-logo.png"  className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl mb-4 shadow-lg"/>
+          </div>
+          <h1 className="text-3xl font-bold text-white text-transparent">
+            Attendance Form
+          </h1>
+          <p className=" text-white mt-2">Mark your attendance with ease</p>
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
         </div>
 
         {/* Status Cards */}
         {formData.email && (
           <div className="grid grid-cols-2 gap-4 mb-6">
+<<<<<<< HEAD
             <div
               className={`p-4 rounded-xl border-2 transition-all ${
                 attendanceStatus.hasCheckedIn ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'
@@ -1640,11 +1806,28 @@ function AttendanceForm() {
                   <p
                     className={`text-xs ${attendanceStatus.hasCheckedIn ? 'text-green-600' : 'text-gray-500'}`}
                   >
+=======
+            <div className={`p-4 rounded-xl border-2 transition-all ${
+              attendanceStatus.hasCheckedIn 
+                ? 'border-green-200 bg-green-50' 
+                : 'border-gray-200 bg-gray-50'
+            }`}>
+              <div className="flex items-center space-x-3">
+                <CheckCircle className={`w-6 h-6 ${
+                  attendanceStatus.hasCheckedIn ? 'text-green-600' : 'text-gray-400'
+                }`} />
+                <div>
+                  <p className="font-semibold text-sm">Check In</p>
+                  <p className={`text-xs ${
+                    attendanceStatus.hasCheckedIn ? 'text-green-600' : 'text-gray-500'
+                  }`}>
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
                     {attendanceStatus.hasCheckedIn ? 'Completed' : 'Pending'}
                   </p>
                 </div>
               </div>
             </div>
+<<<<<<< HEAD
             <div
               className={`p-4 rounded-xl border-2 transition-all ${
                 attendanceStatus.hasCheckedOut ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'
@@ -1659,6 +1842,23 @@ function AttendanceForm() {
                   <p
                     className={`text-xs ${attendanceStatus.hasCheckedOut ? 'text-red-600' : 'text-gray-500'}`}
                   >
+=======
+            
+            <div className={`p-4 rounded-xl border-2 transition-all ${
+              attendanceStatus.hasCheckedOut 
+                ? 'border-red-200 bg-red-50' 
+                : 'border-gray-200 bg-gray-50'
+            }`}>
+              <div className="flex items-center space-x-3">
+                <XCircle className={`w-6 h-6 ${
+                  attendanceStatus.hasCheckedOut ? 'text-red-600' : 'text-gray-400'
+                }`} />
+                <div>
+                  <p className="font-semibold text-sm">Check Out</p>
+                  <p className={`text-xs ${
+                    attendanceStatus.hasCheckedOut ? 'text-red-600' : 'text-gray-500'
+                  }`}>
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
                     {attendanceStatus.hasCheckedOut ? 'Completed' : 'Pending'}
                   </p>
                 </div>
@@ -1679,6 +1879,7 @@ function AttendanceForm() {
               </div>
             )}
 
+<<<<<<< HEAD
             {filteredEmails.length === 0 && !formData.email && (
               <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
                 <p className="text-yellow-700 text-sm">
@@ -1695,6 +1896,8 @@ function AttendanceForm() {
               </div>
             )}
 
+=======
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
             {isSpecificRCC && attendanceStatus.hasCheckedIn && attendanceStatus.hasCheckedOut ? (
               <div className="text-center py-12">
                 <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
@@ -1714,13 +1917,18 @@ function AttendanceForm() {
                       type="text"
                       value={formData.email}
                       onChange={handleEmailSearch}
+<<<<<<< HEAD
                       onFocus={handleInputFocus}
                       onBlur={handleInputBlur}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors pl-11 pr-10"
+=======
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors pl-11"
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
                       placeholder="Type to search email..."
                       autoComplete="off"
                     />
                     <Mail className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+<<<<<<< HEAD
                     {formData.email && (
                       <button
                         type="button"
@@ -1736,6 +1944,9 @@ function AttendanceForm() {
                       </button>
                     )}
                     {isDropdownOpen && filteredEmails.length > 0 && (
+=======
+                    {formData.email && filteredEmails.length > 0 && (
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
                         {filteredEmails.map((user) => (
                           <div
@@ -1744,9 +1955,13 @@ function AttendanceForm() {
                             className="px-4 py-3 cursor-pointer hover:bg-indigo-50 transition-colors border-b border-gray-100 last:border-b-0"
                           >
                             <div className="font-medium text-gray-900">{user.email}</div>
+<<<<<<< HEAD
                             <div className="text-sm text-gray-500">
                               {user.name || '(No name)'} - {user.empCode || '(No emp code)'}
                             </div>
+=======
+                            <div className="text-sm text-gray-500">{user.name} - {user.empCode}</div>
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
                           </div>
                         ))}
                       </div>
@@ -1768,6 +1983,10 @@ function AttendanceForm() {
                       readOnly
                     />
                   </div>
+<<<<<<< HEAD
+=======
+                  
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
                   <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                       <User className="w-4 h-4 text-indigo-500" />
@@ -1835,6 +2054,10 @@ function AttendanceForm() {
                       ))}
                     </select>
                   </div>
+<<<<<<< HEAD
+=======
+                  
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
                   <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                       <Clock className="w-4 h-4 text-indigo-500" />
@@ -1896,6 +2119,10 @@ function AttendanceForm() {
                     <Camera className="w-4 h-4 text-indigo-500" />
                     <span>Capture Image <span className="text-red-500">*</span></span>
                   </label>
+<<<<<<< HEAD
+=======
+                  
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
                   {!isCameraOpen && !capturedImage && (
                     <button
                       type="button"
@@ -1906,6 +2133,7 @@ function AttendanceForm() {
                       <span>Open Camera</span>
                     </button>
                   )}
+<<<<<<< HEAD
                   {isCameraOpen && (
                     <div className="space-y-3">
                       <div className="relative bg-gray-900 rounded-xl overflow-hidden">
@@ -1913,6 +2141,16 @@ function AttendanceForm() {
                           ref={videoRef}
                           className="w-full h-64 object-cover"
                           playsInline
+=======
+
+                  {isCameraOpen && (
+                    <div className="space-y-3">
+                      <div className="relative bg-gray-900 rounded-xl overflow-hidden">
+                        <video 
+                          ref={videoRef} 
+                          className="w-full h-64 object-cover" 
+                          playsInline 
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
@@ -1935,12 +2173,22 @@ function AttendanceForm() {
                       </div>
                     </div>
                   )}
+<<<<<<< HEAD
                   {capturedImage && (
                     <div className="space-y-3">
                       <div className="relative">
                         <img
                           src={capturedImage}
                           alt="Captured"
+=======
+
+                  {capturedImage && (
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <img 
+                          src={capturedImage} 
+                          alt="Captured" 
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
                           className="w-full h-64 object-cover rounded-xl border-2 border-green-200"
                         />
                         <div className="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center space-x-1">
@@ -1957,7 +2205,17 @@ function AttendanceForm() {
                       </button>
                     </div>
                   )}
+<<<<<<< HEAD
                   <canvas ref={canvasRef} width="640" height="480" className="hidden" />
+=======
+                  
+                  <canvas
+                    ref={canvasRef}
+                    width="640"
+                    height="480"
+                    className="hidden"
+                  />
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
                 </div>
 
                 {/* Submit Button */}
@@ -1999,7 +2257,11 @@ function AttendanceForm() {
           </p>
         </div>
       </div>
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
       <style jsx>{`
         @keyframes fade-in-down {
           0% {
@@ -2011,7 +2273,11 @@ function AttendanceForm() {
             transform: translate(-50%, 0);
           }
         }
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
         .animate-fade-in-down {
           animation: fade-in-down 0.5s ease-out;
         }

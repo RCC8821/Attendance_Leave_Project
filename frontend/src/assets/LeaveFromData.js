@@ -89,6 +89,7 @@
   { name: "Ashok Pandey", leaveApprovalManager: "", empCode: "AP088" },
   { name: "Aakriti Soni", leaveApprovalManager: "", empCode: "AS089" },
   { name: "Arti Nandmehar",leaveApprovalManager: "Subhash Patidar",empCode: "AN72" },
+<<<<<<< HEAD
   { name: "Ashwani Sharma", leaveApprovalManager: "Subhash Patidar", empCode: "AS33" },
   { name: "Dhiraj Gawali", leaveApprovalManager: "Subhash Patidar", empCode: "DG41" },
   { name: "Sourabh Chouksey", leaveApprovalManager: "Subhash Patidar", empCode: "SC48" },
@@ -107,6 +108,8 @@
   { name: "Aru Jain", leaveApprovalManager: "Subhash Patidar", empCode: "AJ71" },
   { name: "Manish Ahirwar", leaveApprovalManager: "Subhash Patidar", empCode: "MA79" },
   { name: "Arti Nandmehar", leaveApprovalManager: "Subhash Patidar", empCode: "AN72" },
+=======
+>>>>>>> 14081bfe73ac081f2120973e66b1a26a756c2f43
 ]
 
 
