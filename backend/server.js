@@ -70,34 +70,60 @@ cloudinary.config({
 });
 
 // Dropdown Users Data API
+
 app.get("/api/DropdownUserData", async (req, res) => {
   try {
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "ALL DOER NAMES RCC/DIMENSION!A:H",
+      range: "ALL DOER NAMES RCC/DIMENSION!A:I", // Includes Sites (column I)
     });
 
     const rows = response.data.values || [];
+    console.log("Raw Google Sheets response:", rows); // Log raw data
+
     if (rows.length === 0) {
       return res.status(400).json({ error: "No data found in the sheet" });
     }
 
     let headers = rows[0] || [];
+    console.log("Headers:", headers); // Log headers
+
     if (!headers.length || headers.some((h) => !h || h.trim() === "")) {
-      headers = ["Names", "EMP Code", "Mobile No", "Email", "Leave Approval Manager","Sites"];
+      headers = [
+        "Names",
+        "EMP Code",
+        "Mobile No.",
+        "Email",
+        "Leave Approval Manager",
+        "Department",
+        "Designation",
+        "Sites",
+      ];
+      console.warn("Using default headers due to invalid or missing headers in sheet");
     } else {
       headers = headers.map((header) => header.trim());
     }
 
-    const data = rows.slice(1).map((row) => {
+    if (!headers.includes("Sites")) {
+      console.warn("Sites column not found in headers. Check Google Sheet.");
+    }
+
+    const data = rows.slice(1).map((row, index) => {
       const rowData = {};
-      headers.forEach((header, index) => {
-        rowData[header] = row[index] ? row[index].trim() : "";
+      headers.forEach((header, colIndex) => {
+        rowData[header] = row[colIndex] ? row[colIndex].trim() : "";
       });
+      console.log(`Processed row ${index + 1}:`, rowData); // Log each row
       return rowData;
     });
 
     const filteredData = data.filter((row) => row["Names"] && row["Names"].trim() !== "");
+    console.log("Filtered data:", filteredData); // Log filtered data
+
+    if (filteredData.every((row) => !row["Sites"] || row["Sites"].trim() === "")) {
+      console.warn("Sites column is empty for all rows");
+    }
+
     res.status(200).json({
       success: true,
       count: filteredData.length,
@@ -179,13 +205,16 @@ app.get("/api/attendance", async (req, res) => {
   try {
     const { email, date } = req.query;
     const today = date ? new Date(date) : new Date();
+    if (isNaN(today.getTime())) {
+      return res.status(400).json({ error: "Invalid date format" });
+    }
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
     const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: "Attendance!A:I",
+      spreadsheetId, // Ensure this matches your Google Sheet ID
+      range: "Attendance!A:I", // Matches the sheet's data range
     });
 
     const rows = response.data.values || [];
@@ -194,20 +223,32 @@ app.get("/api/attendance", async (req, res) => {
     }
 
     const headers = rows[0];
-    const emailIndex = headers.indexOf("Email");
-    const timestampIndex = headers.indexOf("Timestamp");
-    const entryTypeIndex = headers.indexOf("EntryType");
-    const siteIndex = headers.indexOf("Site");
+    console.log("Sheet headers:", headers); // Debug log
+
+    // Case-insensitive header lookup
+    const emailIndex = headers.findIndex((header) => header && header.toLowerCase() === "email");
+    const timestampIndex = headers.findIndex((header) => header && header.toLowerCase() === "timestamp");
+    const entryTypeIndex = headers.findIndex((header) => header && header.toLowerCase() === "entrytype");
+    const siteIndex = headers.findIndex((header) => header && header.toLowerCase() === "site");
 
     if (emailIndex === -1 || timestampIndex === -1 || entryTypeIndex === -1 || siteIndex === -1) {
       return res.status(400).json({
-        error: "Invalid sheet structure: Email, Timestamp, EntryType, or Site column missing",
+        error: "Invalid sheet structure",
+        details: `Missing columns: ${
+          emailIndex === -1 ? "Email, " : ""
+        }${
+          timestampIndex === -1 ? "Timestamp, " : ""
+        }${
+          entryTypeIndex === -1 ? "EntryType, " : ""
+        }${
+          siteIndex === -1 ? "Site" : ""
+        }`,
       });
     }
 
     let records = rows.slice(1).filter((row) => {
       const recordDate = new Date(row[timestampIndex]);
-      return recordDate >= today && recordDate < tomorrow && (!email || row[emailIndex] === email);
+      return recordDate >= today && recordDate < tomorrow && (!email || row[emailIndex].toLowerCase() === email.toLowerCase());
     });
 
     const formattedRecords = records.map((row) => {
@@ -220,7 +261,7 @@ app.get("/api/attendance", async (req, res) => {
 
     res.status(200).json(formattedRecords);
   } catch (error) {
-    console.error("Error fetching attendance records:", error.message);
+    console.error("Error fetching attendance records:", error.message, error.stack);
     res.status(500).json({ error: "Internal server error", details: error.message });
   }
 });
@@ -240,7 +281,17 @@ app.post("/api/attendance-Form", async (req, res) => {
       imageUrl = await uploadToCloudinary(image, fileName);
     }
 
-    const timestamp = new Date().toISOString();
+    
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    const hours = String(now.getUTCHours()).padStart(2, '0');
+    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+    const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
+    const timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+
     const values = [[timestamp, email, name, empCode, site, entryType, workShift, locationName, imageUrl || ""]];
 
     await sheets.spreadsheets.values.append({
@@ -269,6 +320,8 @@ app.get("/api/getFormData", async (req, res) => {
     if (!rows.length) {
       return res.status(404).json({ error: "No data found in the sheet" });
     }
+
+
 
     let headers = rows[0] || [];
     if (!headers.length || headers.some((h) => !h || h.trim() === "")) {
@@ -331,8 +384,18 @@ app.post("/api/leave-form", async (req, res) => {
         details: `Sheet '${sheetName}' does not exist in the spreadsheet`,
       });
     }
+     const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    const hours = String(now.getUTCHours()).padStart(2, '0');
+    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+    const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
+    const timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+    
 
-    const timestamp = new Date().toISOString();
+    
     const values = [[timestamp, name, empCode, department, fromDate, toDate, shift, typeOfLeave, reason, days, approvalManager]];
 
     await sheets.spreadsheets.values.append({

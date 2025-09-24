@@ -65,7 +65,7 @@ const LeaveApplicationForm = () => {
         }));
 
         setEmployees(formattedEmployees);
-
+console.log(formattedEmployees)
         // Extract unique departments from column H
         const uniqueDepartments = [
           ...new Set(formattedEmployees.map((emp) => emp.department).filter((dept) => dept.trim())),
