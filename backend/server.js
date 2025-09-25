@@ -400,12 +400,12 @@ app.post("/api/attendance-Form", async (req, res) => {
   }
 });
 
-// Get form data endpoint
+
 app.get("/api/getFormData", async (req, res) => {
   try {
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "LeaveFrom!A:K",
+      range: "LeaveFrom!A:M", // Covers all 13 columns (A to M)
     });
 
     const rows = response.data.values || [];
@@ -427,10 +427,15 @@ app.get("/api/getFormData", async (req, res) => {
         "REASON",
         "APPROVEDDAY",
         "APPROVALMANAGER",
+        "STATUS",
+        "Leave Granted",
       ];
     } else {
       headers = headers.map((header) => header.trim());
     }
+
+    console.log("Headers:", headers);
+    console.log("Raw Rows:", rows);
 
     const formData = rows
       .slice(1)
@@ -440,9 +445,14 @@ app.get("/api/getFormData", async (req, res) => {
         headers.forEach((header, index) => {
           obj[header] = row[index] ? row[index].trim() : "";
         });
+        console.log("Processed Row Object:", obj); // Debug each row
         return obj;
       })
-      .filter((obj) => obj && Object.values(obj).some((value) => value !== ""));
+      .filter((obj) => obj && Object.values(obj).some((value) => value !== ""))
+      // Filter to include only rows where STATUS is empty
+      .filter((obj) => obj && (!obj["STATUS"] || obj["STATUS"].trim() === ""));
+
+    console.log("Filtered Form Data:", formData);
 
     if (!formData.length) {
       return res
@@ -507,6 +517,7 @@ app.post("/api/leave-form", async (req, res) => {
         details: `Sheet '${sheetName}' does not exist in the spreadsheet`,
       });
     }
+
 const now = new Date();
 const istOptions = {
   timeZone: 'Asia/Kolkata',
@@ -633,7 +644,8 @@ app.get("/api/getAttendance-Data", async (req, res) => {
   }
 });
 
-// Approve leave endpoint
+
+
 app.post("/api/Approve-leave", async (req, res) => {
   const { Approved, leaveDays, EMPCODE } = req.body;
 
@@ -685,14 +697,41 @@ app.post("/api/Approve-leave", async (req, res) => {
     updatedRow[11] = Approved; // Column L (index 11) for Approved/Rejected
     updatedRow[12] = leaveDays.toString(); // Column M (index 12) for leave days
 
+    // Generate IST timestamp
+    const now = new Date();
+    const istOptions = {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    };
+    const istFormatter = new Intl.DateTimeFormat('en-IN', istOptions);
+    const parts = istFormatter.formatToParts(now);
+
+    const year = parts.find(p => p.type === 'year').value;
+    const month = parts.find(p => p.type === 'month').value;
+    const day = parts.find(p => p.type === 'day').value;
+    const hour = parts.find(p => p.type === 'hour').value;
+    const minute = parts.find(p => p.type === 'minute').value;
+    const second = parts.find(p => p.type === 'second').value;
+
+    const timestamp = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+    
+    // Set column N (index 13) with the timestamp
+    updatedRow[13] = timestamp; // Always update column N with the current timestamp
+
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `LeaveFrom!A${actualRowIndex}:M${actualRowIndex}`,
+      range: `LeaveFrom!A${actualRowIndex}:N${actualRowIndex}`, // Ensure column N is included
       valueInputOption: "RAW",
       resource: { values: [updatedRow] },
     });
 
-    res.json({ message: "Leave status and days updated successfully" });
+    res.json({ message: "Leave status, days, and approval date updated successfully" });
   } catch (error) {
     console.error("Error in update:", error.message);
     res.status(500).json({ error: "Server error", details: error.message });
