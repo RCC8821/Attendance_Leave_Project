@@ -33,7 +33,9 @@ const requiredEnvVars = [
   "JWT_SECRET",
 ];
 
-const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName]);
+const missingEnvVars = requiredEnvVars.filter(
+  (varName) => !process.env[varName]
+);
 if (missingEnvVars.length > 0) {
   console.error("Missing environment variables:", missingEnvVars);
   process.exit(1);
@@ -44,7 +46,9 @@ const credentials = {
   type: process.env.GOOGLE_TYPE,
   project_id: process.env.GOOGLE_PROJECT_ID,
   private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
-  private_key: process.env.GOOGLE_PRIVATE_KEY ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n") : "",
+  private_key: process.env.GOOGLE_PRIVATE_KEY
+    ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n")
+    : "",
   client_email: process.env.GOOGLE_CLIENT_EMAIL,
   client_id: process.env.GOOGLE_CLIENT_ID,
   auth_uri: process.env.GOOGLE_AUTH_URI,
@@ -99,7 +103,9 @@ app.get("/api/DropdownUserData", async (req, res) => {
         "Designation",
         "Sites",
       ];
-      console.warn("Using default headers due to invalid or missing headers in sheet");
+      console.warn(
+        "Using default headers due to invalid or missing headers in sheet"
+      );
     } else {
       headers = headers.map((header) => header.trim());
     }
@@ -117,10 +123,14 @@ app.get("/api/DropdownUserData", async (req, res) => {
       return rowData;
     });
 
-    const filteredData = data.filter((row) => row["Names"] && row["Names"].trim() !== "");
+    const filteredData = data.filter(
+      (row) => row["Names"] && row["Names"].trim() !== ""
+    );
     console.log("Filtered data:", filteredData); // Log filtered data
 
-    if (filteredData.every((row) => !row["Sites"] || row["Sites"].trim() === "")) {
+    if (
+      filteredData.every((row) => !row["Sites"] || row["Sites"].trim() === "")
+    ) {
       console.warn("Sites column is empty for all rows");
     }
 
@@ -154,21 +164,34 @@ app.post("/api/login", async (req, res) => {
       return res.status(400).json({ error: "No users found in the sheet" });
     }
 
-    const user = rows.slice(1).find((row) => row[0] === email && row[1] === password);
+    const user = rows
+      .slice(1)
+      .find((row) => row[0] === email && row[1] === password);
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
     const userType = user[2];
-    if (!["Admin", "Ravindra Singh", "Lt Col Mayank Sharma (Retd)", "Subhash Patidar"].includes(userType)) {
+    if (
+      ![
+        "Admin",
+        "Ravindra Singh",
+        "Lt Col Mayank Sharma (Retd)",
+        "Subhash Patidar",
+      ].includes(userType)
+    ) {
       return res.status(400).json({ error: "Invalid user type" });
     }
 
-    const token = jwt.sign({ email, userType }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const token = jwt.sign({ email, userType }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
     return res.json({ token, userType });
   } catch (error) {
     console.error("Error in login:", error.message);
-    return res.status(500).json({ error: "Server error", details: error.message });
+    return res
+      .status(500)
+      .json({ error: "Server error", details: error.message });
   }
 });
 
@@ -189,10 +212,13 @@ app.get("/api/user", (req, res) => {
 async function uploadToCloudinary(base64Image, fileName) {
   try {
     const base64Data = base64Image.replace(/^data:image\/[a-z]+;base64,/, "");
-    const result = await cloudinary.uploader.upload(`data:image/jpeg;base64,${base64Data}`, {
-      public_id: fileName,
-      folder: "AttendanceImages",
-    });
+    const result = await cloudinary.uploader.upload(
+      `data:image/jpeg;base64,${base64Data}`,
+      {
+        public_id: fileName,
+        folder: "AttendanceImages",
+      }
+    );
     return result.secure_url;
   } catch (error) {
     console.error("Error uploading to Cloudinary:", error.message);
@@ -226,21 +252,30 @@ app.get("/api/attendance", async (req, res) => {
     console.log("Sheet headers:", headers); // Debug log
 
     // Case-insensitive header lookup
-    const emailIndex = headers.findIndex((header) => header && header.toLowerCase() === "email");
-    const timestampIndex = headers.findIndex((header) => header && header.toLowerCase() === "timestamp");
-    const entryTypeIndex = headers.findIndex((header) => header && header.toLowerCase() === "entrytype");
-    const siteIndex = headers.findIndex((header) => header && header.toLowerCase() === "site");
+    const emailIndex = headers.findIndex(
+      (header) => header && header.toLowerCase() === "email"
+    );
+    const timestampIndex = headers.findIndex(
+      (header) => header && header.toLowerCase() === "timestamp"
+    );
+    const entryTypeIndex = headers.findIndex(
+      (header) => header && header.toLowerCase() === "entrytype"
+    );
+    const siteIndex = headers.findIndex(
+      (header) => header && header.toLowerCase() === "site"
+    );
 
-    if (emailIndex === -1 || timestampIndex === -1 || entryTypeIndex === -1 || siteIndex === -1) {
+    if (
+      emailIndex === -1 ||
+      timestampIndex === -1 ||
+      entryTypeIndex === -1 ||
+      siteIndex === -1
+    ) {
       return res.status(400).json({
         error: "Invalid sheet structure",
-        details: `Missing columns: ${
-          emailIndex === -1 ? "Email, " : ""
-        }${
+        details: `Missing columns: ${emailIndex === -1 ? "Email, " : ""}${
           timestampIndex === -1 ? "Timestamp, " : ""
-        }${
-          entryTypeIndex === -1 ? "EntryType, " : ""
-        }${
+        }${entryTypeIndex === -1 ? "EntryType, " : ""}${
           siteIndex === -1 ? "Site" : ""
         }`,
       });
@@ -248,7 +283,11 @@ app.get("/api/attendance", async (req, res) => {
 
     let records = rows.slice(1).filter((row) => {
       const recordDate = new Date(row[timestampIndex]);
-      return recordDate >= today && recordDate < tomorrow && (!email || row[emailIndex].toLowerCase() === email.toLowerCase());
+      return (
+        recordDate >= today &&
+        recordDate < tomorrow &&
+        (!email || row[emailIndex].toLowerCase() === email.toLowerCase())
+      );
     });
 
     const formattedRecords = records.map((row) => {
@@ -261,18 +300,43 @@ app.get("/api/attendance", async (req, res) => {
 
     res.status(200).json(formattedRecords);
   } catch (error) {
-    console.error("Error fetching attendance records:", error.message, error.stack);
-    res.status(500).json({ error: "Internal server error", details: error.message });
+    console.error(
+      "Error fetching attendance records:",
+      error.message,
+      error.stack
+    );
+    res
+      .status(500)
+      .json({ error: "Internal server error", details: error.message });
   }
 });
 
 // Attendance form submission endpoint
 app.post("/api/attendance-Form", async (req, res) => {
   try {
-    const { email, name, empCode, site, entryType, workShift, locationName, image } = req.body;
+    const {
+      email,
+      name,
+      empCode,
+      site,
+      entryType,
+      workShift,
+      locationName,
+      image,
+    } = req.body;
 
-    if (!email || !name || !empCode || !site || !entryType || !workShift || !locationName) {
-      return res.status(400).json({ error: "All required fields must be provided" });
+    if (
+      !email ||
+      !name ||
+      !empCode ||
+      !site ||
+      !entryType ||
+      !workShift ||
+      !locationName
+    ) {
+      return res
+        .status(400)
+        .json({ error: "All required fields must be provided" });
     }
 
     let imageUrl = null;
@@ -281,18 +345,42 @@ app.post("/api/attendance-Form", async (req, res) => {
       imageUrl = await uploadToCloudinary(image, fileName);
     }
 
-    
     const now = new Date();
-    const year = now.getUTCFullYear();
-    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(now.getUTCDate()).padStart(2, '0');
-    const hours = String(now.getUTCHours()).padStart(2, '0');
-    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
-    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
-    const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
-    const timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+    const istOptions = {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    };
+    const istFormatter = new Intl.DateTimeFormat("en-IN", istOptions);
+    const parts = istFormatter.formatToParts(now);
 
-    const values = [[timestamp, email, name, empCode, site, entryType, workShift, locationName, imageUrl || ""]];
+    const year = parts.find((p) => p.type === "year").value;
+    const month = parts.find((p) => p.type === "month").value;
+    const day = parts.find((p) => p.type === "day").value;
+    const hour = parts.find((p) => p.type === "hour").value;
+    const minute = parts.find((p) => p.type === "minute").value;
+    const second = parts.find((p) => p.type === "second").value;
+
+    const timestamp = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+
+    const values = [
+      [
+        timestamp,
+        email,
+        name,
+        empCode,
+        site,
+        entryType,
+        workShift,
+        locationName,
+        imageUrl || "",
+      ],
+    ];
 
     await sheets.spreadsheets.values.append({
       spreadsheetId,
@@ -301,10 +389,14 @@ app.post("/api/attendance-Form", async (req, res) => {
       requestBody: { values },
     });
 
-    res.status(200).json({ result: "success", message: "Attendance recorded successfully" });
+    res
+      .status(200)
+      .json({ result: "success", message: "Attendance recorded successfully" });
   } catch (error) {
     console.error("Error processing attendance:", error.message);
-    res.status(500).json({ error: "Internal server error", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Internal server error", details: error.message });
   }
 });
 
@@ -320,8 +412,6 @@ app.get("/api/getFormData", async (req, res) => {
     if (!rows.length) {
       return res.status(404).json({ error: "No data found in the sheet" });
     }
-
-
 
     let headers = rows[0] || [];
     if (!headers.length || headers.some((h) => !h || h.trim() === "")) {
@@ -342,7 +432,8 @@ app.get("/api/getFormData", async (req, res) => {
       headers = headers.map((header) => header.trim());
     }
 
-    const formData = rows.slice(1)
+    const formData = rows
+      .slice(1)
       .map((row) => {
         if (!row || row.length === 0) return null;
         const obj = {};
@@ -354,7 +445,9 @@ app.get("/api/getFormData", async (req, res) => {
       .filter((obj) => obj && Object.values(obj).some((value) => value !== ""));
 
     if (!formData.length) {
-      return res.status(404).json({ error: "No valid data found starting from row 2" });
+      return res
+        .status(404)
+        .json({ error: "No valid data found starting from row 2" });
     }
 
     res.json({ data: formData });
@@ -367,36 +460,91 @@ app.get("/api/getFormData", async (req, res) => {
 // Leave form submission endpoint
 app.post("/api/leave-form", async (req, res) => {
   try {
-    const { name, empCode, department, fromDate, toDate, shift, typeOfLeave, reason, days, approvalManager } = req.body;
+    const {
+      name,
+      empCode,
+      department,
+      fromDate,
+      toDate,
+      shift,
+      typeOfLeave,
+      reason,
+      days,
+      approvalManager,
+    } = req.body;
 
-    const requiredFields = { name, empCode, department, fromDate, toDate, shift, typeOfLeave, reason, days, approvalManager };
-    const missingFields = Object.keys(requiredFields).filter((key) => !requiredFields[key]);
+    const requiredFields = {
+      name,
+      empCode,
+      department,
+      fromDate,
+      toDate,
+      shift,
+      typeOfLeave,
+      reason,
+      days,
+      approvalManager,
+    };
+    const missingFields = Object.keys(requiredFields).filter(
+      (key) => !requiredFields[key]
+    );
     if (missingFields.length > 0) {
-      return res.status(400).json({ error: `Missing required fields: ${missingFields.join(", ")}` });
+      return res
+        .status(400)
+        .json({
+          error: `Missing required fields: ${missingFields.join(", ")}`,
+        });
     }
 
     const sheetName = "LeaveFrom";
     const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
-    const sheetExists = spreadsheet.data.sheets.some((sheet) => sheet.properties.title === sheetName);
+    const sheetExists = spreadsheet.data.sheets.some(
+      (sheet) => sheet.properties.title === sheetName
+    );
     if (!sheetExists) {
       return res.status(400).json({
         error: "Invalid spreadsheet configuration",
         details: `Sheet '${sheetName}' does not exist in the spreadsheet`,
       });
     }
-     const now = new Date();
-    const year = now.getUTCFullYear();
-    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(now.getUTCDate()).padStart(2, '0');
-    const hours = String(now.getUTCHours()).padStart(2, '0');
-    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
-    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
-    const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
-    const timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
-    
+const now = new Date();
+const istOptions = {
+  timeZone: 'Asia/Kolkata',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false
+};
+const istFormatter = new Intl.DateTimeFormat('en-IN', istOptions);
+const parts = istFormatter.formatToParts(now);
 
-    
-    const values = [[timestamp, name, empCode, department, fromDate, toDate, shift, typeOfLeave, reason, days, approvalManager]];
+const year = parts.find(p => p.type === 'year').value;
+const month = parts.find(p => p.type === 'month').value;
+const day = parts.find(p => p.type === 'day').value;
+const hour = parts.find(p => p.type === 'hour').value;
+const minute = parts.find(p => p.type === 'minute').value;
+const second = parts.find(p => p.type === 'second').value;
+
+const timestamp = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+
+    const values = [
+      [
+        timestamp,
+        name,
+        empCode,
+        department,
+        fromDate,
+        toDate,
+        shift,
+        typeOfLeave,
+        reason,
+        days,
+        approvalManager,
+      ],
+    ];
 
     await sheets.spreadsheets.values.append({
       spreadsheetId,
@@ -405,22 +553,28 @@ app.post("/api/leave-form", async (req, res) => {
       requestBody: { values },
     });
 
-    res.status(200).json({ result: "success", message: "Leave form recorded successfully" });
+    res
+      .status(200)
+      .json({ result: "success", message: "Leave form recorded successfully" });
   } catch (error) {
     console.error("Error processing leave form:", error.message);
     if (error.message.includes("Unable to parse range")) {
       return res.status(400).json({
         error: "Invalid spreadsheet range",
-        details: "Please ensure the sheet 'LeaveFrom' exists and the range A:K is valid",
+        details:
+          "Please ensure the sheet 'LeaveFrom' exists and the range A:K is valid",
       });
     }
     if (error.code === 403) {
       return res.status(403).json({
         error: "Permission denied",
-        details: "Ensure the service account has edit access to the spreadsheet",
+        details:
+          "Ensure the service account has edit access to the spreadsheet",
       });
     }
-    res.status(500).json({ error: "Internal server error", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Internal server error", details: error.message });
   }
 });
 
@@ -439,12 +593,23 @@ app.get("/api/getAttendance-Data", async (req, res) => {
 
     let headers = rows[0] || [];
     if (!headers.length || headers.some((h) => !h || h.trim() === "")) {
-      headers = ["Timestamp", "Email", "Name", "EmpCode", "Site", "EntryType", "WorkShift", "LocationName", "ImageUrl"];
+      headers = [
+        "Timestamp",
+        "Email",
+        "Name",
+        "EmpCode",
+        "Site",
+        "EntryType",
+        "WorkShift",
+        "LocationName",
+        "ImageUrl",
+      ];
     } else {
       headers = headers.map((header) => header.trim());
     }
 
-    const formData = rows.slice(1)
+    const formData = rows
+      .slice(1)
       .map((row) => {
         if (!row || row.length === 0) return null;
         const obj = {};
@@ -456,7 +621,9 @@ app.get("/api/getAttendance-Data", async (req, res) => {
       .filter((obj) => obj && Object.values(obj).some((value) => value !== ""));
 
     if (!formData.length) {
-      return res.status(404).json({ error: "No valid data found starting from row 2" });
+      return res
+        .status(404)
+        .json({ error: "No valid data found starting from row 2" });
     }
 
     res.json({ data: formData });
@@ -471,13 +638,19 @@ app.post("/api/Approve-leave", async (req, res) => {
   const { Approved, leaveDays, EMPCODE } = req.body;
 
   if (!Approved || leaveDays === undefined || !EMPCODE) {
-    return res.status(400).json({ error: "Approved, leaveDays, and EMPCODE are required" });
+    return res
+      .status(400)
+      .json({ error: "Approved, leaveDays, and EMPCODE are required" });
   }
   if (!["Approved", "Rejected"].includes(Approved)) {
-    return res.status(400).json({ error: "Approved must be either 'Approved' or 'Rejected'" });
+    return res
+      .status(400)
+      .json({ error: "Approved must be either 'Approved' or 'Rejected'" });
   }
   if (typeof leaveDays !== "number" || leaveDays < 0) {
-    return res.status(400).json({ error: "leaveDays must be a non-negative number" });
+    return res
+      .status(400)
+      .json({ error: "leaveDays must be a non-negative number" });
   }
 
   try {
@@ -494,13 +667,17 @@ app.post("/api/Approve-leave", async (req, res) => {
     const headerRow = rows[0];
     const empCodeIndex = headerRow.indexOf("EMPCODE");
     if (empCodeIndex === -1) {
-      return res.status(400).json({ error: "EMPCODE column not found in sheet" });
+      return res
+        .status(400)
+        .json({ error: "EMPCODE column not found in sheet" });
     }
 
     const dataRows = rows.slice(1);
     const rowIndex = dataRows.findIndex((row) => row[empCodeIndex] === EMPCODE);
     if (rowIndex === -1) {
-      return res.status(404).json({ error: `No matching row found for EMPCODE: ${EMPCODE}` });
+      return res
+        .status(404)
+        .json({ error: `No matching row found for EMPCODE: ${EMPCODE}` });
     }
 
     const actualRowIndex = rowIndex + 2;
@@ -535,7 +712,15 @@ app.get("/api/getEmployees", async (req, res) => {
       return res.status(404).json({ error: "No data found in the sheet" });
     }
 
-    const headers = ["Names", "EMP Code", "Mobile No.", "Email", "Leave Approval Manager", "Department", "Designation"];
+    const headers = [
+      "Names",
+      "EMP Code",
+      "Mobile No.",
+      "Email",
+      "Leave Approval Manager",
+      "Department",
+      "Designation",
+    ];
     const dataRows = rows.slice(1);
 
     const formData = dataRows
@@ -550,7 +735,9 @@ app.get("/api/getEmployees", async (req, res) => {
       .filter((obj) => obj && Object.values(obj).some((value) => value !== ""));
 
     if (!formData.length) {
-      return res.status(404).json({ error: "No valid data found starting from row 2" });
+      return res
+        .status(404)
+        .json({ error: "No valid data found starting from row 2" });
     }
 
     res.json({ data: formData });
