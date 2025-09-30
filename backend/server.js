@@ -366,7 +366,7 @@ app.post("/api/attendance-Form", async (req, res) => {
     const minute = parts.find((p) => p.type === "minute").value;
     const second = parts.find((p) => p.type === "second").value;
 
-    const timestamp = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+    const timestamp = `${year}/${month}/${day} ${hour}:${minute}:${second}`;
 
     const values = [
       [
@@ -539,7 +539,7 @@ const hour = parts.find(p => p.type === 'hour').value;
 const minute = parts.find(p => p.type === 'minute').value;
 const second = parts.find(p => p.type === 'second').value;
 
-const timestamp = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+const timestamp = `${year}/${month}/${day} ${hour}:${minute}:${second}`;
 
     const values = [
       [
