@@ -321,6 +321,90 @@ async function uploadToCloudinary(base64Image, fileName) {
 }
 
 // Attendance validation endpoint
+// app.get("/api/attendance", async (req, res) => {
+//   try {
+//     const { email, date } = req.query;
+//     const today = date ? new Date(date) : new Date();
+//     if (isNaN(today.getTime())) {
+//       return res.status(400).json({ error: "Invalid date format" });
+//     }
+//     today.setHours(0, 0, 0, 0);
+//     const tomorrow = new Date(today);
+//     tomorrow.setDate(today.getDate() + 1);
+
+//     const response = await sheets.spreadsheets.values.get({
+//       spreadsheetId, // Ensure this matches your Google Sheet ID
+//       range: "Attendance!A:I", // Matches the sheet's data range
+//     });
+
+//     const rows = response.data.values || [];
+//     if (!rows.length) {
+//       return res.status(404).json({ error: "No data found in Google Sheet" });
+//     }
+
+//     const headers = rows[0];
+//     console.log("Sheet headers:", headers); // Debug log
+
+//     // Case-insensitive header lookup
+//     const emailIndex = headers.findIndex(
+//       (header) => header && header.toLowerCase() === "email"
+//     );
+//     const timestampIndex = headers.findIndex(
+//       (header) => header && header.toLowerCase() === "timestamp"
+//     );
+//     const entryTypeIndex = headers.findIndex(
+//       (header) => header && header.toLowerCase() === "entrytype"
+//     );
+//     const siteIndex = headers.findIndex(
+//       (header) => header && header.toLowerCase() === "site"
+//     );
+
+//     if (
+//       emailIndex === -1 ||
+//       timestampIndex === -1 ||
+//       entryTypeIndex === -1 ||
+//       siteIndex === -1
+//     ) {
+//       return res.status(400).json({
+//         error: "Invalid sheet structure",
+//         details: `Missing columns: ${emailIndex === -1 ? "Email, " : ""}${
+//           timestampIndex === -1 ? "Timestamp, " : ""
+//         }${entryTypeIndex === -1 ? "EntryType, " : ""}${
+//           siteIndex === -1 ? "Site" : ""
+//         }`,
+//       });
+//     }
+
+//     let records = rows.slice(1).filter((row) => {
+//       const recordDate = new Date(row[timestampIndex]);
+//       return (
+//         recordDate >= today &&
+//         recordDate < tomorrow &&
+//         (!email || row[emailIndex].toLowerCase() === email.toLowerCase())
+//       );
+//     });
+
+//     const formattedRecords = records.map((row) => {
+//       const record = {};
+//       headers.forEach((header, index) => {
+//         record[header] = row[index] || "";
+//       });
+//       return record;
+//     });
+
+//     res.status(200).json(formattedRecords);
+//   } catch (error) {
+//     console.error(
+//       "Error fetching attendance records:",
+//       error.message,
+//       error.stack
+//     );
+//     res
+//       .status(500)
+//       .json({ error: "Internal server error", details: error.message });
+//   }
+// });
+
 app.get("/api/attendance", async (req, res) => {
   try {
     const { email, date } = req.query;
@@ -333,8 +417,8 @@ app.get("/api/attendance", async (req, res) => {
     tomorrow.setDate(today.getDate() + 1);
 
     const response = await sheets.spreadsheets.values.get({
-      spreadsheetId, // Ensure this matches your Google Sheet ID
-      range: "Attendance!A:I", // Matches the sheet's data range
+      spreadsheetId,
+      range: "Attendance!A:I",
     });
 
     const rows = response.data.values || [];
@@ -343,9 +427,8 @@ app.get("/api/attendance", async (req, res) => {
     }
 
     const headers = rows[0];
-    console.log("Sheet headers:", headers); // Debug log
+    console.log("Sheet headers:", headers);
 
-    // Case-insensitive header lookup
     const emailIndex = headers.findIndex(
       (header) => header && header.toLowerCase() === "email"
     );
@@ -376,7 +459,17 @@ app.get("/api/attendance", async (req, res) => {
     }
 
     let records = rows.slice(1).filter((row) => {
-      const recordDate = new Date(row[timestampIndex]);
+      // Parse the custom timestamp format: DD/MM/YYYY HH:MM:SS
+      const timestampStr = row[timestampIndex];
+      if (!timestampStr) return false;
+
+      const [datePart, timePart] = timestampStr.split(" ");
+      const [day, month, year] = datePart.split("/");
+      const [hours, minutes, seconds] = timePart.split(":");
+      const recordDate = new Date(year, month - 1, day, hours, minutes, seconds); // month is 0-based
+
+      console.log("Raw timestamp:", timestampStr, "Parsed date:", recordDate);
+
       return (
         recordDate >= today &&
         recordDate < tomorrow &&
@@ -404,6 +497,7 @@ app.get("/api/attendance", async (req, res) => {
       .json({ error: "Internal server error", details: error.message });
   }
 });
+
 
 // Attendance form submission endpoint
 app.post("/api/attendance-Form", async (req, res) => {

@@ -51,44 +51,69 @@ function AttendanceForm() {
   const isSpecificRCC = formData.site.toLowerCase() === "rcc office/आरसीसी कार्यालय".toLowerCase();
 
   // Fetch attendance status
-  const fetchAttendanceStatus = async (email) => {
-    if (!email || typeof email !== 'string' || !userData.some((user) => user.email && user.email.toLowerCase() === email.toLowerCase())) {
-      setAttendanceStatus({ hasCheckedIn: false, hasCheckedOut: false });
-      return;
+ const fetchAttendanceStatus = async (email) => {
+  if (!email || typeof email !== 'string' || !userData.some((user) => user.email && user.email.toLowerCase() === email.toLowerCase())) {
+    setAttendanceStatus({ hasCheckedIn: false, hasCheckedOut: false });
+    return;
+  }
+
+  try {
+    console.log('Fetching attendance status for email:', email);
+
+    // Generate timestamp in DD/MM/YYYY HH:MM:SS format
+    const now = new Date();
+    const istOptions = {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    };
+    const istFormatter = new Intl.DateTimeFormat("en-IN", istOptions);
+    const parts = istFormatter.formatToParts(now);
+
+    const year = parts.find((p) => p.type === "year").value;
+    const month = parts.find((p) => p.type === "month").value;
+    const day = parts.find((p) => p.type === "day").value;
+    const hour = parts.find((p) => p.type === "hour").value;
+    const minute = parts.find((p) => p.type === "minute").value;
+    const second = parts.find((p) => p.type === "second").value;
+
+    const timestamp = `${day}/${month}/${year} ${hour}:${minute}:${second}`;
+    console.log("Generated timestamp:", timestamp);
+
+    const url = `https://attendance-leave-project.onrender.com/api/attendance?email=${encodeURIComponent(email)}&date=${timestamp}`;
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch attendance records: ${response.status} ${response.statusText}. Details: ${errorText}`);
     }
 
-    try {
-      console.log('Fetching attendance status for email:', email);
-      const today = new Date().toISOString().split('T')[0];
-      const url = `https://attendance-leave-project.onrender.com/api/attendance?email=${encodeURIComponent(email)}&date=${today}`;
-      const response = await fetch(url, { cache: 'no-store' });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to fetch attendance records: ${response.status} ${response.statusText}. Details: ${errorText}`);
-      }
+    const records = await response.json();
+    console.log("API Response:", records);
 
-      const records = await response.json();
-      console.log("API Response:", records);
+    const hasCheckedIn = records.some((record) => {
+      const entryType = record.EntryType?.trim().toLowerCase();
+      const site = record.site?.trim().toLowerCase();
+      return entryType === "in" && site === "rcc office/आरसीसी कार्यालय".toLowerCase();
+    });
 
-      const hasCheckedIn = records.some((record) => {
-        const entryType = record.EntryType?.trim().toLowerCase();
-        const site = record.site?.trim().toLowerCase();
-        return entryType === "in" && site === "rcc office/आरसीसी कार्यालय".toLowerCase();
-      });
+    const hasCheckedOut = records.some((record) => {
+      const entryType = record.EntryType?.trim().toLowerCase();
+      const site = record.site?.trim().toLowerCase();
+      return entryType === "out" && site === "rcc office/आरसीसी कार्यालय".toLowerCase();
+    });
 
-      const hasCheckedOut = records.some((record) => {
-        const entryType = record.EntryType?.trim().toLowerCase();
-        const site = record.site?.trim().toLowerCase();
-        return entryType === "out" && site === "rcc office/आरसीसी कार्यालय".toLowerCase();
-      });
-
-      setAttendanceStatus({ hasCheckedIn, hasCheckedOut });
-    } catch (error) {
-      console.error("Error fetching attendance status:", error.message, error.stack);
-      setErrorMessage(`Error fetching attendance status: ${error.message.split("Details:")[1]?.trim() || error.message}`);
-      setAttendanceStatus({ hasCheckedIn: false, hasCheckedOut: false });
-    }
-  };
+    setAttendanceStatus({ hasCheckedIn, hasCheckedOut });
+  } catch (error) {
+    console.error("Error fetching attendance status:", error.message, error.stack);
+    setErrorMessage(`Error fetching attendance status: ${error.message.split("Details:")[1]?.trim() || error.message}`);
+    setAttendanceStatus({ hasCheckedIn: false, hasCheckedOut: false });
+  }
+};
 
   // Fetch user data on mount
   useEffect(() => {
@@ -416,8 +441,6 @@ function AttendanceForm() {
 
     const { hasCheckedIn, hasCheckedOut } = attendanceStatus;
 
-    // Comment out or remove RCC-specific restrictions if not needed
-    /*
     if (isSpecificRCC) {
       if (formData.entryType === "Out" && !hasCheckedIn) {
         setErrorMessage("You must Check In before Checking Out.");
@@ -435,7 +458,6 @@ function AttendanceForm() {
         return;
       }
     }
-    */
 
     try {
       const imageBase64 = await toBase64(formData.image);
@@ -500,7 +522,7 @@ function AttendanceForm() {
     }
   };
 
-  const availableEntryTypes = [
+  const allEntryTypes = [
     { value: "In", label: "Check In" },
     { value: "Out", label: "Check Out" },
   ];
@@ -706,19 +728,36 @@ function AttendanceForm() {
                     <CheckCircle className="w-4 h-4 text-indigo-500" />
                     <span>Entry Type <span className="text-red-500">*</span></span>
                   </label>
-                  <select
-                    name="entryType"
-                    value={formData.entryType}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none bg-white"
-                  >
-                    <option value="">-- Select Entry Type --</option>
-                    {availableEntryTypes.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
+                  {isSpecificRCC && attendanceStatus.hasCheckedIn && attendanceStatus.hasCheckedOut ? (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center space-x-3">
+                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      <p className="text-green-700 text-sm">You have completed Check In and Check Out for today.</p>
+                    </div>
+                  ) : (
+                    <select
+                      name="entryType"
+                      value={formData.entryType}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none bg-white"
+                    >
+                      <option value="">-- Select Entry Type --</option>
+                      {(() => {
+                        let entryOptions = allEntryTypes;
+                        if (isSpecificRCC) {
+                          entryOptions = allEntryTypes.filter(type => {
+                            if (type.value === "In" && !attendanceStatus.hasCheckedIn) return true;
+                            if (type.value === "Out" && attendanceStatus.hasCheckedIn && !attendanceStatus.hasCheckedOut) return true;
+                            return false;
+                          });
+                        }
+                        return entryOptions.map((type) => (
+                          <option key={type.value} value={type.value}>
+                            {type.label}
+                          </option>
+                        ));
+                      })()}
+                    </select>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
