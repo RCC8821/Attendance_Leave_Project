@@ -51,8 +51,74 @@ function AttendanceForm() {
   const isSpecificRCC = formData.site.toLowerCase() === "rcc office/आरसीसी कार्यालय".toLowerCase();
 
   // Fetch attendance status
- const fetchAttendanceStatus = async (email) => {
+  
+//  const fetchAttendanceStatus = async (email) => {
+//   if (!email || typeof email !== 'string' || !userData.some((user) => user.email && user.email.toLowerCase() === email.toLowerCase())) {
+//     setAttendanceStatus({ hasCheckedIn: false, hasCheckedOut: false });
+//     return;
+//   }
+
+//   try {
+//     console.log('Fetching attendance status for email:', email);
+
+//     // Generate timestamp in DD/MM/YYYY HH:MM:SS format
+//     const now = new Date();
+//     const istOptions = {
+//       timeZone: "Asia/Kolkata",
+//       year: "numeric",
+//       month: "2-digit",
+//       day: "2-digit",
+//       hour: "2-digit",
+//       minute: "2-digit",
+//       second: "2-digit",
+//       hour12: false,
+//     };
+//     const istFormatter = new Intl.DateTimeFormat("en-IN", istOptions);
+//     const parts = istFormatter.formatToParts(now);
+
+//     const year = parts.find((p) => p.type === "year").value;
+//     const month = parts.find((p) => p.type === "month").value;
+//     const day = parts.find((p) => p.type === "day").value;
+//     const hour = parts.find((p) => p.type === "hour").value;
+//     const minute = parts.find((p) => p.type === "minute").value;
+//     const second = parts.find((p) => p.type === "second").value;
+
+//     const timestamp = `${day}/${month}/${year} ${hour}:${minute}:${second}`;
+//     console.log("Generated timestamp:", timestamp);
+
+//     const url = `https://attendance-leave-project.onrender.com/api/attendance?email=${encodeURIComponent(email)}&date=${timestamp}`;
+//     const response = await fetch(url, { cache: 'no-store' });
+//     if (!response.ok) {
+//       const errorText = await response.text();
+//       throw new Error(`Failed to fetch attendance records: ${response.status} ${response.statusText}. Details: ${errorText}`);
+//     }
+
+//     const records = await response.json();
+//     console.log("API Response:", records);
+
+//     const hasCheckedIn = records.some((record) => {
+//       const entryType = record.EntryType?.trim().toLowerCase();
+//       const site = record.site?.trim().toLowerCase();
+//       return entryType === "in" && site === "rcc office/आरसीसी कार्यालय".toLowerCase();
+//     });
+
+//     const hasCheckedOut = records.some((record) => {
+//       const entryType = record.EntryType?.trim().toLowerCase();
+//       const site = record.site?.trim().toLowerCase();
+//       return entryType === "out" && site === "rcc office/आरसीसी कार्यालय".toLowerCase();
+//     });
+
+//     setAttendanceStatus({ hasCheckedIn, hasCheckedOut });
+//   } catch (error) {
+//     console.error("Error fetching attendance status:", error.message, error.stack);
+//     setErrorMessage(`Error fetching attendance status: ${error.message.split("Details:")[1]?.trim() || error.message}`);
+//     setAttendanceStatus({ hasCheckedIn: false, hasCheckedOut: false });
+//   }
+// };
+
+const fetchAttendanceStatus = async (email) => {
   if (!email || typeof email !== 'string' || !userData.some((user) => user.email && user.email.toLowerCase() === email.toLowerCase())) {
+    console.log('Invalid email or user not found:', email);
     setAttendanceStatus({ hasCheckedIn: false, hasCheckedOut: false });
     return;
   }
@@ -60,39 +126,42 @@ function AttendanceForm() {
   try {
     console.log('Fetching attendance status for email:', email);
 
-    // Generate timestamp in DD/MM/YYYY HH:MM:SS format
+    // Generate date in YYYY-MM-DD format
     const now = new Date();
     const istOptions = {
       timeZone: "Asia/Kolkata",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
     };
-    const istFormatter = new Intl.DateTimeFormat("en-IN", istOptions);
-    const parts = istFormatter.formatToParts(now);
+    const yyyyMMddFormatter = new Intl.DateTimeFormat("en-CA", istOptions); // YYYY-MM-DD
+    const [year, month, day] = yyyyMMddFormatter.format(now).split('-');
+    const yyyyMMddDate = `${year}-${month}-${day}`; // e.g., "2025-10-03"
+    console.log("Generated date (YYYY-MM-DD):", yyyyMMddDate);
 
-    const year = parts.find((p) => p.type === "year").value;
-    const month = parts.find((p) => p.type === "month").value;
-    const day = parts.find((p) => p.type === "day").value;
-    const hour = parts.find((p) => p.type === "hour").value;
-    const minute = parts.find((p) => p.type === "minute").value;
-    const second = parts.find((p) => p.type === "second").value;
+    // Try YYYY-MM-DD first
+    let url = `https://attendance-leave-project.onrender.com/api/attendance?email=${encodeURIComponent(email)}&date=${yyyyMMddDate}`;
+    console.log("Trying API URL (YYYY-MM-DD):", url);
+    let response = await fetch(url, { cache: 'no-store' });
 
-    const timestamp = `${day}/${month}/${year} ${hour}:${minute}:${second}`;
-    console.log("Generated timestamp:", timestamp);
-
-    const url = `https://attendance-leave-project.onrender.com/api/attendance?email=${encodeURIComponent(email)}&date=${timestamp}`;
-    const response = await fetch(url, { cache: 'no-store' });
+    let records = [];
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Failed to fetch attendance records: ${response.status} ${response.statusText}. Details: ${errorText}`);
+      console.error("API error with YYYY-MM-DD:", response.status, response.statusText, errorText);
+
+      // Fallback to DD/MM/YYYY
+      const ddMMyyyyFormatter = new Intl.DateTimeFormat("en-IN", istOptions); // DD/MM/YYYY
+      const ddMMyyyyDate = ddMMyyyyFormatter.format(now); // e.g., "03/10/2025"
+      console.log("Falling back to DD/MM/YYYY:", ddMMyyyyDate);
+      url = `https://attendance-leave-project.onrender.com/api/attendance?email=${encodeURIComponent(email)}&date=${ddMMyyyyDate}`;
+      response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) {
+        const errorText2 = await response.text();
+        throw new Error(`Failed to fetch attendance records: ${response.status} ${response.statusText}. Details: ${errorText2}`);
+      }
     }
 
-    const records = await response.json();
+    records = await response.json();
     console.log("API Response:", records);
 
     const hasCheckedIn = records.some((record) => {
@@ -107,6 +176,7 @@ function AttendanceForm() {
       return entryType === "out" && site === "rcc office/आरसीसी कार्यालय".toLowerCase();
     });
 
+    console.log("Attendance Status:", { hasCheckedIn, hasCheckedOut });
     setAttendanceStatus({ hasCheckedIn, hasCheckedOut });
   } catch (error) {
     console.error("Error fetching attendance status:", error.message, error.stack);
