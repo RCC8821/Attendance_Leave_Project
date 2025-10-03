@@ -75,39 +75,125 @@ cloudinary.config({
 
 // Dropdown Users Data API
 
+// app.get("/api/DropdownUserData", async (req, res) => {
+//   try {
+//     const response = await sheets.spreadsheets.values.get({
+//       spreadsheetId,
+//       range: "ALL DOER NAMES RCC/DIMENSION!A:I", // Includes Sites (column I)
+//     });
+
+//     const rows = response.data.values || [];
+//     console.log("Raw Google Sheets response:", rows); // Log raw data
+
+//     if (rows.length === 0) {
+//       return res.status(400).json({ error: "No data found in the sheet" });
+//     }
+
+//     let headers = rows[0] || [];
+//     console.log("Headers:", headers); // Log headers
+
+//     if (!headers.length || headers.some((h) => !h || h.trim() === "")) {
+//       headers = [
+//         "Names",
+//         "EMP Code",
+//         "Mobile No.",
+//         "Email",
+//         "Leave Approval Manager",
+//         "Department",
+//         "Designation",
+//         "Sites",
+//       ];
+//       console.warn(
+//         "Using default headers due to invalid or missing headers in sheet"
+//       );
+//     } else {
+//       headers = headers.map((header) => header.trim());
+//     }
+
+//     if (!headers.includes("Sites")) {
+//       console.warn("Sites column not found in headers. Check Google Sheet.");
+//     }
+
+//     const data = rows.slice(1).map((row, index) => {
+//       const rowData = {};
+//       headers.forEach((header, colIndex) => {
+//         rowData[header] = row[colIndex] ? row[colIndex].trim() : "";
+//       });
+//       console.log(`Processed row ${index + 1}:`, rowData); // Log each row
+//       return rowData;
+//     });
+
+//     const filteredData = data.filter(
+//       (row) => row["Names"] && row["Names"].trim() !== ""
+//     );
+//     console.log("Filtered data:", filteredData); // Log filtered data
+
+//     if (
+//       filteredData.every((row) => !row["Sites"] || row["Sites"].trim() === "")
+//     ) {
+//       console.warn("Sites column is empty for all rows");
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       count: filteredData.length,
+//       data: filteredData,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching data from Google Sheet:", error.message);
+//     res.status(500).json({
+//       success: false,
+//       error: "Failed to fetch data from Google Sheet",
+//       details: error.message,
+//     });
+//   }
+// });
+
+
+// Dropdown Users Data API
 app.get("/api/DropdownUserData", async (req, res) => {
   try {
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "ALL DOER NAMES RCC/DIMENSION!A:I", // Includes Sites (column I)
+      range: "ALL DOER NAMES RCC/DIMENSION!A:I", // Extended range for safety
     });
 
     const rows = response.data.values || [];
-    console.log("Raw Google Sheets response:", rows); // Log raw data
+    console.log("Raw Google Sheets response:", JSON.stringify(rows, null, 2));
 
     if (rows.length === 0) {
       return res.status(400).json({ error: "No data found in the sheet" });
     }
 
     let headers = rows[0] || [];
-    console.log("Headers:", headers); // Log headers
+    console.log("Headers:", headers);
+
+    const expectedHeaders = [
+      "Names",
+      "EMP Code",
+      "Mobile No.",
+      "Email",
+      "Leave Approval Manager",
+      "Department",
+      "Designation",
+      "Sites",
+    ];
 
     if (!headers.length || headers.some((h) => !h || h.trim() === "")) {
-      headers = [
-        "Names",
-        "EMP Code",
-        "Mobile No.",
-        "Email",
-        "Leave Approval Manager",
-        "Department",
-        "Designation",
-        "Sites",
-      ];
-      console.warn(
-        "Using default headers due to invalid or missing headers in sheet"
-      );
+      console.warn("Using default headers due to invalid or missing headers in sheet");
+      headers = expectedHeaders;
     } else {
-      headers = headers.map((header) => header.trim());
+      headers = headers.map((header, index) => {
+        if (index === 7 && (!header || header.trim() !== "Sites")) {
+          console.warn(`Expected 'Sites' in column H, found '${header}'. Correcting to 'Sites'.`);
+          return "Sites";
+        }
+        if (index === 0 && (!header || header.trim() !== "Names")) {
+          console.warn(`Expected 'Names' in column A, found '${header}'. Correcting to 'Names'.`);
+          return "Names";
+        }
+        return header.trim();
+      });
     }
 
     if (!headers.includes("Sites")) {
@@ -118,15 +204,22 @@ app.get("/api/DropdownUserData", async (req, res) => {
       const rowData = {};
       headers.forEach((header, colIndex) => {
         rowData[header] = row[colIndex] ? row[colIndex].trim() : "";
+        if (header === "Names") {
+          console.log(`Names value for row ${index + 1}:`, row[colIndex] || "Empty");
+        }
+        if (header === "Sites") {
+          console.log(`Sites value for row ${index + 1}:`, row[colIndex] || "Empty");
+        }
       });
-      console.log(`Processed row ${index + 1}:`, rowData); // Log each row
+      console.log(`Processed row ${index + 1}:`, rowData);
       return rowData;
     });
 
-    const filteredData = data.filter(
-      (row) => row["Names"] && row["Names"].trim() !== ""
-    );
-    console.log("Filtered data:", filteredData); // Log filtered data
+    // Relaxed filter to include all rows for debugging
+    const filteredData = data; // Temporarily remove filter
+    // Original filter: const filteredData = data.filter((row) => row["Names"] && row["Names"].trim() !== "");
+
+    console.log("Filtered data:", JSON.stringify(filteredData, null, 2));
 
     if (
       filteredData.every((row) => !row["Sites"] || row["Sites"].trim() === "")
@@ -148,6 +241,7 @@ app.get("/api/DropdownUserData", async (req, res) => {
     });
   }
 });
+
 
 // Login endpoint
 app.post("/api/login", async (req, res) => {
@@ -345,29 +439,29 @@ app.post("/api/attendance-Form", async (req, res) => {
       imageUrl = await uploadToCloudinary(image, fileName);
     }
 
-    const now = new Date();
-    const istOptions = {
-      timeZone: "Asia/Kolkata",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    };
-    const istFormatter = new Intl.DateTimeFormat("en-IN", istOptions);
-    const parts = istFormatter.formatToParts(now);
+  const now = new Date();
+const istOptions = {
+  timeZone: "Asia/Kolkata",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+};
+const istFormatter = new Intl.DateTimeFormat("en-IN", istOptions);
+const parts = istFormatter.formatToParts(now);
 
-    const year = parts.find((p) => p.type === "year").value;
-    const month = parts.find((p) => p.type === "month").value;
-    const day = parts.find((p) => p.type === "day").value;
-    const hour = parts.find((p) => p.type === "hour").value;
-    const minute = parts.find((p) => p.type === "minute").value;
-    const second = parts.find((p) => p.type === "second").value;
+const year = parts.find((p) => p.type === "year").value;
+const month = parts.find((p) => p.type === "month").value;
+const day = parts.find((p) => p.type === "day").value;
+const hour = parts.find((p) => p.type === "hour").value;
+const minute = parts.find((p) => p.type === "minute").value;
+const second = parts.find((p) => p.type === "second").value;
 
-    const timestamp = `${day}/${month}/${year} ${hour}:${minute}:${second}`;
-
+const timestamp = `${day}/${month}/${year} ${hour}:${minute}:${second}`;
+console.log(timestamp)
     const values = [
       [
         timestamp,
@@ -540,7 +634,7 @@ const minute = parts.find(p => p.type === 'minute').value;
 const second = parts.find(p => p.type === 'second').value;
 
 const timestamp = `${day}/${month}/${year} ${hour}:${minute}:${second}`;
-
+console.log(timestamp)
     const values = [
       [
         timestamp,
