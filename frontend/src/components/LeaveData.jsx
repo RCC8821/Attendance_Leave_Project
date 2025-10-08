@@ -8,130 +8,131 @@ const LeaveData = () => {
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [status, setStatus] = useState("");
   const [approvedDays, setApprovedDays] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [notification, setNotification] = useState(null); // { type: "success"|"error", message: string }
+  const [isLoading, setIsLoading] = useState(true);
+  const [notification, setNotification] = useState(null);
 
-  const isManager = localStorage.getItem("userType"); // Get userType from localStorage
+  const isManager = localStorage.getItem("userType");
 
   useEffect(() => {
     const fetchLeaveData = async () => {
       try {
-
         const response = await fetch("https://attendance-leave-project.onrender.com/api/getFormData", {
-
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });
         const result = await response.json();
 
-        if (result.data) {
+        if (result.data && Array.isArray(result.data)) {
           console.log("Fetched leave data:", result.data);
+          // Normalize API data to match table field names
+          const normalizedData = result.data.map((entry) => ({
+            UID: entry.UID || "N/A",
+            SubmissionDate: entry.Timestamp || "N/A",
+            name: entry.NAME || "N/A",
+            empcode: entry.EMPCODE || "N/A",
+            department: entry.DEPARTMENT || "N/A",
+            fromDate: entry.DATEFROM || "N/A",
+            toDate: entry.DATETO || "N/A",
+            shift: entry.SHIFT || "N/A",
+            typeOfLeave: entry.TYPEOFLEAVE || "N/A",
+            reason: entry.REASON || "N/A",
+            days: entry.APPROVEDDAY || "N/A",
+            approvalManager: entry.APPROVALMANAGER || "N/A",
+          }));
+          // Filter data for non-Admin users
           const filteredData = isManager === "Admin"
-            ? result.data
-            : result.data.filter((entry) => entry.APPROVALMANAGER === isManager);
+            ? normalizedData
+            : normalizedData.filter((entry) => entry.approvalManager === isManager);
+          console.log("Normalized and filtered leaveData:", filteredData);
           setLeaveData(filteredData);
         } else {
           setLeaveError(result.error || "No data available");
         }
       } catch (err) {
+        console.error("Fetch error:", err);
         setLeaveError("Failed to fetch leave data");
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchLeaveData();
-  }, []);
+  }, [isManager]);
 
   const handleActionClick = (entry) => {
     setSelectedEntry(entry);
     setModalOpen(true);
     setStatus("");
     setApprovedDays("");
-    setNotification(null); // Clear previous notifications
+    setNotification(null);
   };
 
   const handleSave = async () => {
-  if (!status) {
-    alert("Please select Approve or Reject");
-    return;
-  }
-  if (status === "Approved" && (!approvedDays || isNaN(approvedDays) || approvedDays <= 0)) {
-    alert("Please enter a valid number of approved days (greater than 0)");
-    return;
-  }
-
-  // Debug: Log selectedEntry to inspect its structure
-  console.log("selectedEntry:", selectedEntry);
-
-  // Ensure selectedEntry exists
-  if (!selectedEntry) {
-    alert("No entry selected. Please select a leave request.");
-    console.log("selectedEntry is null or undefined");
-    return;
-  }
-
-  setIsLoading(true); // Show loading state
-  setNotification(null); // Clear previous notifications
-
-  try {
-    const payload = {
-      Approved: status, // Send "Approved" or "Rejected"
-      leaveDays: status === "Approved" ? parseInt(approvedDays) : 0, // Send leaveDays, 0 if Rejected
-      EMPCODE: selectedEntry.EMPCODE || "" // Use EMPCODE as the key
-    };
-
-    // Debug: Log the payload to verify
-    console.log("Payload:", payload);
-
-    // Validate EMPCODE
-    if (!payload.EMPCODE) {
-      setIsLoading(false);
-      alert("Employee code (EMPCODE) is missing. Please ensure the selected entry has a valid employee code.");
-      console.log("Possible field names in selectedEntry:", Object.keys(selectedEntry));
+    if (!status) {
+      alert("Please select Approve or Reject");
+      return;
+    }
+    if (status === "Approved" && (!approvedDays || isNaN(approvedDays) || approvedDays <= 0)) {
+      alert("Please enter a valid number of approved days (greater than 0)");
       return;
     }
 
-
-    const response = await fetch("https://attendance-leave-project.onrender.com/api/Approve-leave", {
-
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Update failed");
+    if (!selectedEntry) {
+      alert("No entry selected. Please select a leave request.");
+      return;
     }
 
-    // Update the local state to remove the processed entry
-    setLeaveData((prevData) =>
-      prevData.filter((entry) => entry.EMPCODE !== selectedEntry.EMPCODE)
-    );
+    setIsLoading(true);
+    setNotification(null);
 
-    // Show success notification
-    setNotification({
-      type: "success",
-      message: `Leave ${status} Successfully`,
-    });
+    try {
+      const payload = {
+        Approved: status,
+        leaveDays: status === "Approved" ? parseInt(approvedDays) : 0,
+        UID: selectedEntry.UID || "",
+      };
 
-    // Clear notification after 3 seconds
-    setTimeout(() => setNotification(null), 3000);
-  } catch (err) {
-    console.error("Error in handleSave:", err);
-    setNotification({
-      type: "error",
-      message: err.message || "Update failed. Please try again.",
-    });
-    // Clear error notification after 3 seconds
-    setTimeout(() => setNotification(null), 3000);
-  } finally {
-    setIsLoading(false);
-    setModalOpen(false);
-  }
-};
+      if (!payload.UID) {
+        throw new Error("UID is missing in the selected entry");
+      }
+
+      console.log("Sending payload to API:", payload);
+
+      const response = await fetch("https://attendance-leave-project.onrender.com/api/Approve-leave", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Update failed");
+      }
+
+      setLeaveData((prevData) =>
+        prevData.filter((entry) => entry.UID !== selectedEntry.UID)
+      );
+
+      setNotification({
+        type: "success",
+        message: `Leave ${status} Successfully`,
+      });
+
+      setTimeout(() => setNotification(null), 3000);
+    } catch (err) {
+      console.error("Error in handleSave:", err);
+      setNotification({
+        type: "error",
+        message: err.message || "Update failed. Please try again.",
+      });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setIsLoading(false);
+      setModalOpen(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Notification Toast */}
       {notification && (
         <div
           className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg text-white ${
@@ -144,25 +145,27 @@ const LeaveData = () => {
 
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
         <h3 className="text-xl font-bold text-gray-800 mb-4">Leave Data</h3>
+        {isLoading && <p className="text-gray-600">Loading...</p>}
         {leaveError && <div className="text-red-500 mb-4">{leaveError}</div>}
-        {leaveData.length === 0 && !leaveError && (
-          <p className="text-gray-600">Loading...</p>
+        {!isLoading && !leaveError && leaveData.length === 0 && (
+          <p className="text-gray-600">No leave data available</p>
         )}
-        {leaveData.length > 0 && (
+        {!isLoading && leaveData.length > 0 && (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   {[
-                    "TIMESTAMP",
+                    "UID",
+                    "Timestamp",
                     "Employee Name",
                     "Employee Code",
                     "Department",
-                    "Leave Type",
-                    "Reason",
-                    "Shift",
                     "From Date",
                     "To Date",
+                    "Shift",
+                    "Leave Type",
+                    "Reason",
                     "Approved Days",
                     "Approval Manager",
                     "Action",
@@ -179,17 +182,18 @@ const LeaveData = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {leaveData.map((entry, index) => (
                   <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.TIMESTAMP || ""}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.NAME || ""}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.EMPCODE || ""}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.DEPARTMENT || ""}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.TYPEOFLEAVE || ""}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.REASON || ""}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.SHIFT || ""}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.DATEFROM || ""}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.DATETO || ""}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.APPROVEDDAY || ""}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.APPROVALMANAGER || ""}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.UID}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.SubmissionDate}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.empcode}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.department}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.fromDate}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.toDate}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.shift}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.typeOfLeave}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900 max-w-[200px] truncate">{entry.reason}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.days}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.approvalManager}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
                         onClick={() => handleActionClick(entry)}

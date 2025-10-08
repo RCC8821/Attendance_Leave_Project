@@ -321,89 +321,6 @@ async function uploadToCloudinary(base64Image, fileName) {
 }
 
 // Attendance validation endpoint
-// app.get("/api/attendance", async (req, res) => {
-//   try {
-//     const { email, date } = req.query;
-//     const today = date ? new Date(date) : new Date();
-//     if (isNaN(today.getTime())) {
-//       return res.status(400).json({ error: "Invalid date format" });
-//     }
-//     today.setHours(0, 0, 0, 0);
-//     const tomorrow = new Date(today);
-//     tomorrow.setDate(today.getDate() + 1);
-
-//     const response = await sheets.spreadsheets.values.get({
-//       spreadsheetId, // Ensure this matches your Google Sheet ID
-//       range: "Attendance!A:I", // Matches the sheet's data range
-//     });
-
-//     const rows = response.data.values || [];
-//     if (!rows.length) {
-//       return res.status(404).json({ error: "No data found in Google Sheet" });
-//     }
-
-//     const headers = rows[0];
-//     console.log("Sheet headers:", headers); // Debug log
-
-//     // Case-insensitive header lookup
-//     const emailIndex = headers.findIndex(
-//       (header) => header && header.toLowerCase() === "email"
-//     );
-//     const timestampIndex = headers.findIndex(
-//       (header) => header && header.toLowerCase() === "timestamp"
-//     );
-//     const entryTypeIndex = headers.findIndex(
-//       (header) => header && header.toLowerCase() === "entrytype"
-//     );
-//     const siteIndex = headers.findIndex(
-//       (header) => header && header.toLowerCase() === "site"
-//     );
-
-//     if (
-//       emailIndex === -1 ||
-//       timestampIndex === -1 ||
-//       entryTypeIndex === -1 ||
-//       siteIndex === -1
-//     ) {
-//       return res.status(400).json({
-//         error: "Invalid sheet structure",
-//         details: `Missing columns: ${emailIndex === -1 ? "Email, " : ""}${
-//           timestampIndex === -1 ? "Timestamp, " : ""
-//         }${entryTypeIndex === -1 ? "EntryType, " : ""}${
-//           siteIndex === -1 ? "Site" : ""
-//         }`,
-//       });
-//     }
-
-//     let records = rows.slice(1).filter((row) => {
-//       const recordDate = new Date(row[timestampIndex]);
-//       return (
-//         recordDate >= today &&
-//         recordDate < tomorrow &&
-//         (!email || row[emailIndex].toLowerCase() === email.toLowerCase())
-//       );
-//     });
-
-//     const formattedRecords = records.map((row) => {
-//       const record = {};
-//       headers.forEach((header, index) => {
-//         record[header] = row[index] || "";
-//       });
-//       return record;
-//     });
-
-//     res.status(200).json(formattedRecords);
-//   } catch (error) {
-//     console.error(
-//       "Error fetching attendance records:",
-//       error.message,
-//       error.stack
-//     );
-//     res
-//       .status(500)
-//       .json({ error: "Internal server error", details: error.message });
-//   }
-// });
 
 app.get("/api/attendance", async (req, res) => {
   try {
@@ -628,6 +545,7 @@ app.get("/api/getFormData", async (req, res) => {
     let headers = rows[0] || [];
     if (!headers.length || headers.some((h) => !h || h.trim() === "")) {
       headers = [
+        "UID",
         "TIMESTAMP",
         "NAME",
         "EMPCODE",
@@ -680,6 +598,7 @@ app.get("/api/getFormData", async (req, res) => {
 });
 
 // Leave form submission endpoint
+
 app.post("/api/leave-form", async (req, res) => {
   try {
     const {
@@ -730,32 +649,37 @@ app.post("/api/leave-form", async (req, res) => {
       });
     }
 
-const now = new Date();
-const istOptions = {
-  timeZone: 'Asia/Kolkata',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hour12: false
-};
-const istFormatter = new Intl.DateTimeFormat('en-IN', istOptions);
-const parts = istFormatter.formatToParts(now);
+    // Fetch current rows to determine the next UID
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${sheetName}!A:A`, // Check first column for row count
+    });
+    const rows = response.data.values || [];
+    const uid = rows.length; // UID = row count (including header) = 1 for first data row
+    console.log("Generated UID:", uid);
 
-const year = parts.find(p => p.type === 'year').value;
-const month = parts.find(p => p.type === 'month').value;
-const day = parts.find(p => p.type === 'day').value;
-const hour = parts.find(p => p.type === 'hour').value;
-const minute = parts.find(p => p.type === 'minute').value;
-const second = parts.find(p => p.type === 'second').value;
+    // Generate IST timestamp for SubmissionDate
+    const now = new Date();
+    const istOptions = {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    };
+    const istFormatter = new Intl.DateTimeFormat("en-IN", istOptions);
+    const parts = istFormatter.formatToParts(now);
+    const timestamp = `${parts.find((p) => p.type === "day").value}/${parts.find((p) => p.type === "month").value}/${parts.find((p) => p.type === "year").value} ${parts.find((p) => p.type === "hour").value}:${parts.find((p) => p.type === "minute").value}:${parts.find((p) => p.type === "second").value}`;
+    console.log("SubmissionDate:", timestamp);
 
-const timestamp = `${day}/${month}/${year} ${hour}:${minute}:${second}`;
-console.log(timestamp)
+    // Prepare values with UID as the first column
     const values = [
       [
-        timestamp,
+        uid.toString(), // Column A: UID (1, 2, 3, ... as string)
+        timestamp, // Column B: SubmissionDate
         name,
         empCode,
         department,
@@ -764,40 +688,39 @@ console.log(timestamp)
         shift,
         typeOfLeave,
         reason,
-        days,
+        days.toString(), // Ensure days is a string
         approvalManager,
       ],
     ];
 
+    // Append the new row
     await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: `${sheetName}!A:K`,
+      range: `${sheetName}!A:L`, // Range A:L for 12 columns
       valueInputOption: "RAW",
       requestBody: { values },
     });
 
-    res
-      .status(200)
-      .json({ result: "success", message: "Leave form recorded successfully" });
+    res.status(200).json({
+      result: "success",
+      message: "Leave form recorded successfully",
+      uid, // Return UID for use in Approve-leave
+    });
   } catch (error) {
     console.error("Error processing leave form:", error.message);
     if (error.message.includes("Unable to parse range")) {
       return res.status(400).json({
         error: "Invalid spreadsheet range",
-        details:
-          "Please ensure the sheet 'LeaveFrom' exists and the range A:K is valid",
+        details: `Please ensure the sheet '${sheetName}' exists and the range A:L is valid`,
       });
     }
     if (error.code === 403) {
       return res.status(403).json({
         error: "Permission denied",
-        details:
-          "Ensure the service account has edit access to the spreadsheet",
+        details: "Ensure the service account has edit access to the spreadsheet",
       });
     }
-    res
-      .status(500)
-      .json({ error: "Internal server error", details: error.message });
+    res.status(500).json({ error: "Internal server error", details: error.message });
   }
 });
 
@@ -858,94 +781,95 @@ app.get("/api/getAttendance-Data", async (req, res) => {
 
 
 
-app.post("/api/Approve-leave", async (req, res) => {
-  const { Approved, leaveDays, EMPCODE } = req.body;
+//// Approvel Leave
 
-  if (!Approved || leaveDays === undefined || !EMPCODE) {
-    return res
-      .status(400)
-      .json({ error: "Approved, leaveDays, and EMPCODE are required" });
+app.post("/api/Approve-leave", async (req, res) => {
+  const { Approved, leaveDays, UID } = req.body;
+
+  console.log("Request Body:", req.body); // Log request body: { Approved: 'Approved', leaveDays: 1, UID: 1 }
+
+  if (!Approved || leaveDays === undefined || !UID) {
+    return res.status(400).json({ error: "Approved, leaveDays, and UID are required" });
   }
   if (!["Approved", "Rejected"].includes(Approved)) {
-    return res
-      .status(400)
-      .json({ error: "Approved must be either 'Approved' or 'Rejected'" });
+    return res.status(400).json({ error: "Approved must be either 'Approved' or 'Rejected'" });
   }
   if (typeof leaveDays !== "number" || leaveDays < 0) {
-    return res
-      .status(400)
-      .json({ error: "leaveDays must be a non-negative number" });
+    return res.status(400).json({ error: "leaveDays must be a non-negative number" });
   }
 
   try {
+    console.log("Spreadsheet ID:", spreadsheetId);
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "LeaveFrom!A:M",
+      range: "LeaveFrom!A:O", // Range A:O to include all 15 columns
     });
 
     const rows = response.data.values || [];
+    console.log("Fetched Rows:", rows);
     if (!rows.length) {
       return res.status(404).json({ error: "No data found in the sheet" });
     }
 
     const headerRow = rows[0];
-    const empCodeIndex = headerRow.indexOf("EMPCODE");
-    if (empCodeIndex === -1) {
-      return res
-        .status(400)
-        .json({ error: "EMPCODE column not found in sheet" });
+    const uidIndex = headerRow.indexOf("UID");
+    console.log("Header Row:", headerRow, "UID Index:", uidIndex);
+    if (uidIndex === -1) {
+      return res.status(400).json({ error: "UID column not found in sheet" });
     }
 
     const dataRows = rows.slice(1);
-    const rowIndex = dataRows.findIndex((row) => row[empCodeIndex] === EMPCODE);
+    const rowIndex = dataRows.findIndex(
+      (row) => row[uidIndex]?.toString() === UID.toString()
+    );
+    console.log("Row Index:", rowIndex, "UID:", UID);
     if (rowIndex === -1) {
-      return res
-        .status(404)
-        .json({ error: `No matching row found for EMPCODE: ${EMPCODE}` });
+      return res.status(404).json({ error: `No matching row found for UID: ${UID}` });
     }
 
     const actualRowIndex = rowIndex + 2;
+    console.log("Actual Row Index:", actualRowIndex);
     const updatedRow = [...dataRows[rowIndex]];
-    updatedRow[11] = Approved; // Column L (index 11) for Approved/Rejected
-    updatedRow[12] = leaveDays.toString(); // Column M (index 12) for leave days
+    while (updatedRow.length <= 14) updatedRow.push(""); // Pad row to include columns A:O (15 columns)
+    updatedRow[12] = Approved; // Column M: Approved
+    updatedRow[13] = leaveDays.toString(); // Column N: leaveDays
 
-    // Generate IST timestamp
+    // Generate IST timestamp for ApprovalTimestamp
     const now = new Date();
     const istOptions = {
-      timeZone: 'Asia/Kolkata',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
     };
-    const istFormatter = new Intl.DateTimeFormat('en-IN', istOptions);
+    const istFormatter = new Intl.DateTimeFormat("en-IN", istOptions);
     const parts = istFormatter.formatToParts(now);
+    const timestamp = `${parts.find((p) => p.type === "year").value}-${parts.find((p) => p.type === "month").value}-${parts.find((p) => p.type === "day").value} ${parts.find((p) => p.type === "hour").value}:${parts.find((p) => p.type === "minute").value}:${parts.find((p) => p.type === "second").value}`;
+    updatedRow[14] = timestamp; // Column O: ApprovalTimestamp
+    console.log("Updated Row:", updatedRow);
 
-    const year = parts.find(p => p.type === 'year').value;
-    const month = parts.find(p => p.type === 'month').value;
-    const day = parts.find(p => p.type === 'day').value;
-    const hour = parts.find(p => p.type === 'hour').value;
-    const minute = parts.find(p => p.type === 'minute').value;
-    const second = parts.find(p => p.type === 'second').value;
-
-    const timestamp = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
-    
-    // Set column N (index 13) with the timestamp
-    updatedRow[13] = timestamp; // Always update column N with the current timestamp
-
-    await sheets.spreadsheets.values.update({
+    const updateResponse = await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `LeaveFrom!A${actualRowIndex}:N${actualRowIndex}`, // Ensure column N is included
+      range: `LeaveFrom!A${actualRowIndex}:O${actualRowIndex}`, // Update range A:O
       valueInputOption: "RAW",
       resource: { values: [updatedRow] },
     });
+    console.log("Update Response:", updateResponse.data);
+
+    // Verify the update
+    const verifyResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `LeaveFrom!A${actualRowIndex}:O${actualRowIndex}`, // Verify range A:O
+    });
+    console.log("Verified Row Data:", verifyResponse.data.values);
 
     res.json({ message: "Leave status, days, and approval date updated successfully" });
   } catch (error) {
-    console.error("Error in update:", error.message);
+    console.error("Error in update:", error);
     res.status(500).json({ error: "Server error", details: error.message });
   }
 });
