@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Edit } from "lucide-react";
 
@@ -71,7 +72,7 @@ const LeaveData = () => {
       alert("Please select Approve or Reject");
       return;
     }
-    if (status === "Approved" && (!approvedDays || isNaN(approvedDays) || approvedDays <= 0)) {
+    if (status === "Approved" && (!approvedDays || isNaN(approvedDays) || parseFloat(approvedDays) <= 0)) {
       alert("Please enter a valid number of approved days (greater than 0)");
       return;
     }
@@ -87,7 +88,7 @@ const LeaveData = () => {
     try {
       const payload = {
         Approved: status,
-        leaveDays: status === "Approved" ? parseInt(approvedDays) : 0,
+        leaveDays: status === "Approved" ? parseFloat(approvedDays) : 0, // Use parseFloat to allow decimals
         UID: selectedEntry.UID || "",
       };
 
@@ -231,7 +232,8 @@ const LeaveData = () => {
                   onChange={(e) => setApprovedDays(e.target.value)}
                   placeholder="Number of Approved Days"
                   className="w-full px-3 py-2 border border-gray-300 rounded"
-                  min="1"
+                  min="0.5"
+                  step="0.1" // Allow decimal inputs
                   disabled={isLoading}
                 />
               )}

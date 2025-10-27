@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Calendar,
@@ -9,6 +10,72 @@ import {
   X,
   Loader2,
 } from "lucide-react";
+
+// Date utility functions from the first code
+const formatDateToDDMMYYYY = (date) => {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "";
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+const parseDDMMYYYYToISO = (ddmmyyyy) => {
+  if (!ddmmyyyy || !ddmmyyyy.includes("/")) return "";
+  try {
+    const [day, month, year] = ddmmyyyy.split("/");
+    const isoDate = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    const date = new Date(isoDate);
+    if (isNaN(date.getTime())) return "";
+    return isoDate;
+  } catch {
+    return "";
+  }
+};
+
+const validateDDMMYYYY = (value) => {
+  if (!value || typeof value !== "string") return false;
+  const pattern = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+  if (!pattern.test(value)) return false;
+
+  const isoDate = parseDDMMYYYYToISO(value);
+  const date = new Date(isoDate);
+  if (isNaN(date.getTime())) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date >= today;
+};
+
+// Days calculation from the first code
+const calculateDays = (fromDateStr, toDateStr, timeSlot) => {
+  if (!fromDateStr || !toDateStr) return "";
+
+  const fromISO = parseDDMMYYYYToISO(fromDateStr);
+  const toISO = parseDDMMYYYYToISO(toDateStr);
+
+  if (!fromISO || !toISO) return "";
+
+  const fromDate = new Date(fromISO);
+  const toDate = new Date(toISO);
+
+  if (fromDate > toDate) return "";
+
+  const diffTime = Math.abs(toDate - fromDate);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+  const isHalfDay = timeSlot && (
+    timeSlot.includes("Half day") || timeSlot.includes("आधा दिन")
+  );
+
+  if (fromDateStr === toDateStr && isHalfDay) {
+    return "0.5";
+  }
+
+  return diffDays.toString();
+};
 
 const LeaveApplicationForm = () => {
   const [formData, setFormData] = useState({
@@ -39,8 +106,8 @@ const LeaveApplicationForm = () => {
   ];
 
   const timeSlots = [
-    "Before Lunch Half day/लंच से पहले",
-    "After Lunch Half day/लंच के बाद",
+    "Before Lunch Half day/लंच से पहले आधा दिन",
+    "After Lunch Half day/लंच के बाद आधा दिन",
     "Full day/पूरा दिन",
   ];
 
@@ -56,22 +123,18 @@ const LeaveApplicationForm = () => {
           throw new Error(data.error || "Failed to fetch employee data");
         }
 
-        // Map API data to expected format
         const formattedEmployees = data.data.map((item) => ({
           name: item["Names"] || "",
           empCode: item["EMP Code"] || "",
           leaveApprovalManager: item["Leave Approval Manager"] || "",
-          department: item["Sites"] || "", // Assuming column H is "Sites" but mapping to department
+          department: item["Sites"] || "",
         }));
 
         setEmployees(formattedEmployees);
-console.log(formattedEmployees)
-        // Extract unique departments from column H
         const uniqueDepartments = [
           ...new Set(formattedEmployees.map((emp) => emp.department).filter((dept) => dept.trim())),
         ];
         setDepartments(uniqueDepartments);
-
         setErrorMessage("");
       } catch (error) {
         console.error("Error fetching employee data:", error);
@@ -85,22 +148,6 @@ console.log(formattedEmployees)
 
     fetchEmployeeData();
   }, []);
-
-  // Calculate days between dates
-  const calculateDays = (fromDate, toDate, timeSlot) => {
-    if (fromDate && toDate) {
-      const from = new Date(fromDate);
-      const to = new Date(toDate);
-      if (from > to) return "";
-      const diffTime = Math.abs(to - from);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-      if (timeSlot.includes("Half day") && fromDate === toDate) {
-        return 0.5;
-      }
-      return diffDays >= 1 ? diffDays : 1;
-    }
-    return "";
-  };
 
   // Handle input changes
   const handleInputChange = (e) => {
@@ -120,7 +167,7 @@ console.log(formattedEmployees)
         newData.department = selectedEmployee ? selectedEmployee.department : "";
       }
 
-      // Auto-calculate days when dates or time slot change
+      // Recalculate days when dates or time slot change
       if (name === "fromDate" || name === "toDate" || name === "timeSlot") {
         newData.days = calculateDays(
           name === "fromDate" ? value : newData.fromDate,
@@ -132,6 +179,45 @@ console.log(formattedEmployees)
       return newData;
     });
     setErrorMessage("");
+  };
+
+  // Handle date picker change to convert ISO to DD/MM/YYYY
+  const handleDatePickerChange = (name, isoDate) => {
+    if (!isoDate) {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: "",
+        days: "",
+      }));
+      setErrorMessage("");
+      return;
+    }
+
+    const ddmmyyyy = formatDateToDDMMYYYY(isoDate);
+    setFormData((prev) => {
+      const newData = { ...prev, [name]: ddmmyyyy };
+
+      if (name === "fromDate" || name === "toDate") {
+        const otherDate = name === "fromDate" ? prev.toDate : prev.fromDate;
+        newData.days = calculateDays(
+          name === "fromDate" ? ddmmyyyy : otherDate,
+          name === "toDate" ? ddmmyyyy : otherDate,
+          prev.timeSlot
+        );
+      }
+
+      return newData;
+    });
+    setErrorMessage("");
+  };
+
+  // Get min date for toDate
+  const getToDateMin = () => {
+    if (formData.fromDate) {
+      return parseDDMMYYYYToISO(formData.fromDate);
+    }
+    const today = new Date();
+    return today.toISOString().split("T")[0];
   };
 
   // Handle form submission
@@ -148,19 +234,26 @@ console.log(formattedEmployees)
       "timeSlot",
       "department",
     ];
-    const isFormValid = requiredFields.every((field) => formData[field]);
+    const missing = requiredFields.filter((field) => !formData[field]?.trim());
 
-    if (!isFormValid) {
-      setErrorMessage(
-        "कृपया सभी आवश्यक फ़ील्ड भरें / Please fill all required fields"
-      );
+    if (missing.length > 0) {
+      setErrorMessage(`Please fill: ${missing.join(", ")}`);
       return;
     }
 
-    if (new Date(formData.fromDate) > new Date(formData.toDate)) {
-      setErrorMessage(
-        "अंतिम तारीख शुरुआती तारीख के बाद होनी चाहिए / End date must be after start date"
-      );
+    // Validate dates
+    if (!validateDDMMYYYY(formData.fromDate) || !validateDDMMYYYY(formData.toDate)) {
+      setErrorMessage("Please select valid dates");
+      return;
+    }
+
+    const fromISO = parseDDMMYYYYToISO(formData.fromDate);
+    const toISO = parseDDMMYYYYToISO(formData.toDate);
+    const fromDate = new Date(fromISO);
+    const toDate = new Date(toISO);
+
+    if (fromDate > toDate) {
+      setErrorMessage("To date must be after From date");
       return;
     }
 
@@ -168,23 +261,25 @@ console.log(formattedEmployees)
     setErrorMessage("");
 
     try {
+      const submitData = {
+        name: formData.name.trim(),
+        empCode: formData.empCode.trim(),
+        department: formData.department.trim(),
+        fromDate: formData.fromDate.trim(), // DD/MM/YYYY format
+        toDate: formData.toDate.trim(),     // DD/MM/YYYY format
+        shift: formData.timeSlot.trim(),
+        typeOfLeave: formData.leaveType.trim(),
+        reason: formData.reason.trim(),
+        days: formData.days || "0",
+        approvalManager: formData.approvalManager.trim(),
+      };
+
       const response = await fetch("https://attendance-leave-project.onrender.com/api/leave-form", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name: formData.name,
-          empCode: formData.empCode,
-          fromDate: formData.fromDate,
-          toDate: formData.toDate,
-          shift: formData.timeSlot,
-          typeOfLeave: formData.leaveType,
-          reason: formData.reason,
-          days: formData.days,
-          approvalManager: formData.approvalManager,
-          department: formData.department,
-        }),
+        body: JSON.stringify(submitData),
       });
 
       const data = await response.json();
@@ -194,7 +289,6 @@ console.log(formattedEmployees)
       }
 
       setShowSuccessModal(true);
-      // Reset form after successful submission
       setFormData({
         name: "",
         empCode: "",
@@ -209,9 +303,7 @@ console.log(formattedEmployees)
       });
       setErrorMessage("");
     } catch (error) {
-      setErrorMessage(
-        `फॉर्म सबमिट करने में त्रुटि: ${error.message} / Error submitting form: ${error.message}`
-      );
+      setErrorMessage(`Error submitting form: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -236,7 +328,8 @@ console.log(formattedEmployees)
   };
 
   // Get today's date for min date validation
-  const today = new Date().toISOString().split("T")[0];
+  const todayISO = new Date().toISOString().split("T")[0];
+  const todayFormatted = formatDateToDDMMYYYY(todayISO);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-800 p-4 flex items-center justify-center">
@@ -245,7 +338,7 @@ console.log(formattedEmployees)
         <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-t-2xl p-6 text-center text-white">
           <div className="flex items-center justify-center gap-3 mb-2">
             <img
-              src="/rcc-logo.png" // Ensure the path is correct
+              src="/rcc-logo.png"
               className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl mb-4 shadow-lg"
               alt="RCC Logo"
             />
@@ -254,6 +347,8 @@ console.log(formattedEmployees)
             </h1>
           </div>
           <p className="text-sm md:text-base text-blue-100">
+            <strong>Date Format:</strong> DD/MM/YYYY (e.g., {todayFormatted})
+            <br />
             Leave request कम से कम 3 दिन पहले डालना ज़रूरी है।
             <br />
             सिर्फ emergency leave को ही same day पर approve किया जाएगा।
@@ -373,38 +468,57 @@ console.log(formattedEmployees)
                 <Calendar className="w-5 h-5" />
                 Leave Duration / छुट्टी की अवधि
               </h3>
+              <p className="text-sm text-blue-700 mb-3">
+                Select dates using calendar picker (displays as DD/MM/YYYY)
+              </p>
 
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-700">
                     From Date <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="date"
-                    name="fromDate"
-                    value={formData.fromDate}
-                    onChange={handleInputChange}
-                    min={today}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    required
-                    aria-required="true"
-                  />
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={parseDDMMYYYYToISO(formData.fromDate)}
+                      onChange={(e) => handleDatePickerChange("fromDate", e.target.value)}
+                      min={todayISO}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      required
+                      aria-required="true"
+                    />
+                    {formData.fromDate && (
+                      <div className="absolute inset-0 flex items-center px-3 pointer-events-none">
+                        <span className="text-sm text-gray-500">
+                          {formData.fromDate}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-700">
                     To Date <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="date"
-                    name="toDate"
-                    value={formData.toDate}
-                    onChange={handleInputChange}
-                    min={formData.fromDate || today}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    required
-                    aria-required="true"
-                  />
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={parseDDMMYYYYToISO(formData.toDate)}
+                      onChange={(e) => handleDatePickerChange("toDate", e.target.value)}
+                      min={getToDateMin()}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      required
+                      aria-required="true"
+                    />
+                    {formData.toDate && (
+                      <div className="absolute inset-0 flex items-center px-3 pointer-events-none">
+                        <span className="text-sm text-gray-500">
+                          {formData.toDate}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -531,15 +645,12 @@ console.log(formattedEmployees)
                   Your leave application has been submitted and is pending
                   approval.
                 </p>
-                {formData.fromDate && formData.toDate && (
-                  <div className="bg-blue-50 p-3 rounded-lg mb-4">
-                    <p className="text-blue-800 font-semibold">
-                      Leave Duration:{" "}
-                      {new Date(formData.fromDate).toLocaleDateString()} to{" "}
-                      {new Date(formData.toDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
+                <div className="bg-blue-50 p-3 rounded-lg mb-4">
+                  <p className="text-blue-800 font-semibold">
+                    Leave Duration: {formData.fromDate} to {formData.toDate}
+                  </p>
+                  <p className="text-blue-800">Days: {formData.days}</p>
+                </div>
                 <button
                   onClick={() => setShowSuccessModal(false)}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
