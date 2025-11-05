@@ -38,14 +38,18 @@ function AttendanceForm() {
   const offices = [
     { name: "Home", lat: 23.231878, lng: 77.455833 },
     { name: "Office/कार्यालय", lat: 23.19775059819785, lng: 77.41701272524529 },
-    { name: "RNTU/आरएनटीयू", lat: 23.130614, lng: 77.565729 },
+    { name: "RNTU/आरएनटीयू", lat: 23.135181, lng: 77.563744 },
     { name: "Dubey Ji Site/दुबे जी साइट", lat: 23.124046, lng: 77.497393 },
-    { name: "Regional Center West", lat: 37.7749, lng: -122.4208 },
-    { name: "Satellite Office 1", lat: 37.776, lng: -122.4194 },
-    { name: "Satellite Office 2", lat: 37.7738, lng: -122.4194 },
-    { name: "Admin Building", lat: 37.7752, lng: -122.42 },
-    { name: "Tech Hub", lat: 37.7745, lng: -122.4188 },
-    { name: "Support Center", lat: 37.78, lng: -122.41 },
+    { name: "Madhav Gupta Ji/माधव गुप्ता जी", lat: 23.1714257, lng: 77.427868 },
+    { name: "Dr.Shrikant Jain Site/डॉ. श्रीकांत जैन साइट", lat: 23.186214, lng: 77.428280 },
+    { name: "Dr.Manish Jain Site/डॉ. मनीष जैन साइट", lat: 23.215016, lng: 77.426319 },
+    { name: "Rana Ji Site/राणा जी साइट", lat: 23.182188, lng: 77.454757 },
+    { name: "Rajeev Abbot. Ji Site/राजीव एबोट. जी साइट", lat: 23.263392, lng: 77.457032 },
+    { name: "Piyush Goenka/ पियूष गोयनका", lat: 23.234808, lng: 77.395521 },
+    { name: "Wallia Ji Commercial/वालिया जी कर्मशियल", lat: 23.184511, lng: 77.462847 },
+    { name: "Wallia Ji Appartment/वालिया जी अपार्टमेन्‍ट", lat: 23.181771, lng: 77.432712 },
+    { name: "Ahuja Ji Site/आहूजा जी साइट", lat: 23.214686, lng: 77.438693 },
+    { name: "Scope College/स्‍कॉप कॉलेज", lat: 23.152594, lng: 77.478894 },
   ];
 
   const isSpecificRCC = formData.site.toLowerCase() === "rcc office/आरसीसी कार्यालय".toLowerCase();
