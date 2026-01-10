@@ -124,7 +124,7 @@ function AttendanceForm() {
       console.log("Generated date (YYYY-MM-DD):", yyyyMMddDate);
 
       // Try YYYY-MM-DD first
-      let url = `http://localhost:5000/api/attendance?email=${encodeURIComponent(email)}&date=${yyyyMMddDate}`;
+      let url = `https://attendance-leave-project.onrender.com/api/attendance?email=${encodeURIComponent(email)}&date=${yyyyMMddDate}`;
       console.log("Trying API URL (YYYY-MM-DD):", url);
       let response = await fetch(url, { cache: 'no-store' });
 
@@ -137,7 +137,7 @@ function AttendanceForm() {
         const ddMMyyyyFormatter = new Intl.DateTimeFormat("en-IN", istOptions); // DD/MM/YYYY
         const ddMMyyyyDate = ddMMyyyyFormatter.format(now); // e.g., "03/10/2025"
         console.log("Falling back to DD/MM/YYYY:", ddMMyyyyDate);
-        url = `http://localhost:5000/api/attendance?email=${encodeURIComponent(email)}&date=${ddMMyyyyDate}`;
+        url = `https://attendance-leave-project.onrender.com/api/attendance?email=${encodeURIComponent(email)}&date=${ddMMyyyyDate}`;
         response = await fetch(url, { cache: 'no-store' });
         if (!response.ok) {
           const errorText2 = await response.text();
