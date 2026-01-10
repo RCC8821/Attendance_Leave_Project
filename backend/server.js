@@ -247,6 +247,217 @@ async function uploadToCloudinary(base64Image, fileName) {
 
 // Attendance validation endpoint
 
+// app.get("/api/attendance", async (req, res) => {
+//   try {
+//     const { email, date } = req.query;
+
+//     // Parse input date (YYYY-MM-DD or DD/MM/YYYY)
+//     let today;
+//     if (!date) {
+//       today = new Date();
+//     } else if (date.includes('-')) {
+//       // YYYY-MM-DD format
+//       const [year, month, day] = date.split('-');
+//       today = new Date(year, month - 1, day); // month is 0-based
+//     } else if (date.includes('/')) {
+//       // DD/MM/YYYY format
+//       const [day, month, year] = date.split('/');
+//       today = new Date(year, month - 1, day);
+//     } else {
+//       return res.status(400).json({ error: "Invalid date format" });
+//     }
+
+//     if (isNaN(today.getTime())) {
+//       return res.status(400).json({ error: "Invalid date format" });
+//     }
+
+//     // Normalize to IST and set to start of day
+//     today = new Date(today.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+//     today.setHours(0, 0, 0, 0);
+//     const tomorrow = new Date(today);
+//     tomorrow.setDate(today.getDate() + 1);
+
+//     console.log("Parsed input date (today):", today, "Tomorrow:", tomorrow);
+
+//     const response = await sheets.spreadsheets.values.get({
+//       spreadsheetId,
+//       range: "Attendance!A:I",
+//     });
+
+//     const rows = response.data.values || [];
+//     if (!rows.length) {
+//       return res.status(404).json({ error: "No data found in Google Sheet" });
+//     }
+
+//     const headers = rows[0];
+//     console.log("Sheet headers:", headers);
+
+//     const emailIndex = headers.findIndex(
+//       (header) => header && header.toLowerCase() === "email"
+//     );
+//     const timestampIndex = headers.findIndex(
+//       (header) => header && header.toLowerCase() === "timestamp"
+//     );
+//     const entryTypeIndex = headers.findIndex(
+//       (header) => header && header.toLowerCase() === "entrytype"
+//     );
+//     const siteIndex = headers.findIndex(
+//       (header) => header && header.toLowerCase() === "site"
+//     );
+
+//     if (
+//       emailIndex === -1 ||
+//       timestampIndex === -1 ||
+//       entryTypeIndex === -1 ||
+//       siteIndex === -1
+//     ) {
+//       return res.status(400).json({
+//         error: "Invalid sheet structure",
+//         details: `Missing columns: ${emailIndex === -1 ? "Email, " : ""}${
+//           timestampIndex === -1 ? "Timestamp, " : ""
+//         }${entryTypeIndex === -1 ? "EntryType, " : ""}${
+//           siteIndex === -1 ? "Site" : ""
+//         }`,
+//       });
+//     }
+
+//     let records = rows.slice(1).filter((row) => {
+//       // Parse sheet Timestamp (DD/MM/YYYY HH:MM:SS)
+//       const timestampStr = row[timestampIndex];
+//       if (!timestampStr) return false;
+
+//       const [datePart] = timestampStr.split(" "); // Get date part only
+//       const [day, month, year] = datePart.split("/");
+//       const recordDate = new Date(year, month - 1, day); // Ignore time
+//       if (isNaN(recordDate.getTime())) return false;
+
+//       // Normalize to IST
+//       const recordDateIST = new Date(recordDate.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+//       recordDateIST.setHours(0, 0, 0, 0);
+
+//       console.log("Raw timestamp:", timestampStr, "Parsed date (IST):", recordDateIST);
+
+//       return (
+//         recordDateIST.getTime() === today.getTime() &&
+//         (!email || row[emailIndex].toLowerCase() === email.toLowerCase())
+//       );
+//     });
+
+//     const formattedRecords = records.map((row) => {
+//       const record = {};
+//       headers.forEach((header, index) => {
+//         record[header] = row[index] || "";
+//       });
+//       return record;
+//     });
+
+//     res.status(200).json(formattedRecords);
+//   } catch (error) {
+//     console.error(
+//       "Error fetching attendance records:",
+//       error.message,
+//       error.stack
+//     );
+//     res
+//       .status(500)
+//       .json({ error: "Internal server error", details: error.message });
+//   }
+// });
+
+
+
+
+// // Attendance form submission endpoint
+// app.post("/api/attendance-Form", async (req, res) => {
+//   try {
+//     const {
+//       email,
+//       name,
+//       empCode,
+//       site,
+//       entryType,
+//       workShift,
+//       locationName,
+//       image,
+//     } = req.body;
+
+//     if (
+//       !email ||
+//       !name ||
+//       !empCode ||
+//       !site ||
+//       !entryType ||
+//       !workShift ||
+//       !locationName
+//     ) {
+//       return res
+//         .status(400)
+//         .json({ error: "All required fields must be provided" });
+//     }
+
+//     let imageUrl = null;
+//     if (image) {
+//       const fileName = `attendance_${email}_${Date.now()}`;
+//       imageUrl = await uploadToCloudinary(image, fileName);
+//     }
+
+//   const now = new Date();
+// const istOptions = {
+//   timeZone: "Asia/Kolkata",
+//   year: "numeric",
+//   month: "2-digit",
+//   day: "2-digit",
+//   hour: "2-digit",
+//   minute: "2-digit",
+//   second: "2-digit",
+//   hour12: false,
+// };
+// const istFormatter = new Intl.DateTimeFormat("en-IN", istOptions);
+// const parts = istFormatter.formatToParts(now);
+
+// const year = parts.find((p) => p.type === "year").value;
+// const month = parts.find((p) => p.type === "month").value;
+// const day = parts.find((p) => p.type === "day").value;
+// const hour = parts.find((p) => p.type === "hour").value;
+// const minute = parts.find((p) => p.type === "minute").value;
+// const second = parts.find((p) => p.type === "second").value;
+
+// const timestamp = `${day}/${month}/${year} ${hour}:${minute}:${second}`;
+// console.log(timestamp)
+//     const values = [
+//       [
+//         timestamp,
+//         email,
+//         name,
+//         empCode,
+//         site,
+//         entryType,
+//         workShift,
+//         locationName,
+//         imageUrl || "",
+//       ],
+//     ];
+
+//     await sheets.spreadsheets.values.append({
+//       spreadsheetId,
+//       range: "Attendance!A:I",
+//       valueInputOption: "RAW",
+//       requestBody: { values },
+//     });
+
+//     res
+//       .status(200)
+//       .json({ result: "success", message: "Attendance recorded successfully" });
+//   } catch (error) {
+//     console.error("Error processing attendance:", error.message);
+//     res
+//       .status(500)
+//       .json({ error: "Internal server error", details: error.message });
+//   }
+// });
+
+
+
 app.get("/api/attendance", async (req, res) => {
   try {
     const { email, date } = req.query;
@@ -258,7 +469,7 @@ app.get("/api/attendance", async (req, res) => {
     } else if (date.includes('-')) {
       // YYYY-MM-DD format
       const [year, month, day] = date.split('-');
-      today = new Date(year, month - 1, day); // month is 0-based
+      today = new Date(year, month - 1, day);
     } else if (date.includes('/')) {
       // DD/MM/YYYY format
       const [day, month, year] = date.split('/');
@@ -279,79 +490,135 @@ app.get("/api/attendance", async (req, res) => {
 
     console.log("Parsed input date (today):", today, "Tomorrow:", tomorrow);
 
-    const response = await sheets.spreadsheets.values.get({
+    // ✅ FIX: Fetch from BOTH sheets
+    const attendanceResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: "Attendance!A:I",
     });
 
-    const rows = response.data.values || [];
-    if (!rows.length) {
-      return res.status(404).json({ error: "No data found in Google Sheet" });
+    const outResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: "Out!A:I",
+    });
+
+    const attendanceRows = attendanceResponse.data.values || [];
+    const outRows = outResponse.data.values || [];
+
+    if (!attendanceRows.length && !outRows.length) {
+      return res.status(404).json({ error: "No data found in Google Sheets" });
     }
 
-    const headers = rows[0];
-    console.log("Sheet headers:", headers);
+    // Process Attendance sheet (IN records)
+    let attendanceRecords = [];
+    if (attendanceRows.length > 1) {
+      const headers = attendanceRows[0];
+      console.log("Attendance sheet headers:", headers);
 
-    const emailIndex = headers.findIndex(
-      (header) => header && header.toLowerCase() === "email"
-    );
-    const timestampIndex = headers.findIndex(
-      (header) => header && header.toLowerCase() === "timestamp"
-    );
-    const entryTypeIndex = headers.findIndex(
-      (header) => header && header.toLowerCase() === "entrytype"
-    );
-    const siteIndex = headers.findIndex(
-      (header) => header && header.toLowerCase() === "site"
-    );
-
-    if (
-      emailIndex === -1 ||
-      timestampIndex === -1 ||
-      entryTypeIndex === -1 ||
-      siteIndex === -1
-    ) {
-      return res.status(400).json({
-        error: "Invalid sheet structure",
-        details: `Missing columns: ${emailIndex === -1 ? "Email, " : ""}${
-          timestampIndex === -1 ? "Timestamp, " : ""
-        }${entryTypeIndex === -1 ? "EntryType, " : ""}${
-          siteIndex === -1 ? "Site" : ""
-        }`,
-      });
-    }
-
-    let records = rows.slice(1).filter((row) => {
-      // Parse sheet Timestamp (DD/MM/YYYY HH:MM:SS)
-      const timestampStr = row[timestampIndex];
-      if (!timestampStr) return false;
-
-      const [datePart] = timestampStr.split(" "); // Get date part only
-      const [day, month, year] = datePart.split("/");
-      const recordDate = new Date(year, month - 1, day); // Ignore time
-      if (isNaN(recordDate.getTime())) return false;
-
-      // Normalize to IST
-      const recordDateIST = new Date(recordDate.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-      recordDateIST.setHours(0, 0, 0, 0);
-
-      console.log("Raw timestamp:", timestampStr, "Parsed date (IST):", recordDateIST);
-
-      return (
-        recordDateIST.getTime() === today.getTime() &&
-        (!email || row[emailIndex].toLowerCase() === email.toLowerCase())
+      const emailIndex = headers.findIndex(
+        (header) => header && header.toLowerCase() === "email"
       );
+      const timestampIndex = headers.findIndex(
+        (header) => header && header.toLowerCase() === "timestamp"
+      );
+      const entryTypeIndex = headers.findIndex(
+        (header) => header && header.toLowerCase() === "entrytype"
+      );
+      const siteIndex = headers.findIndex(
+        (header) => header && header.toLowerCase() === "site"
+      );
+
+      if (emailIndex !== -1 && timestampIndex !== -1) {
+        attendanceRecords = attendanceRows.slice(1).filter((row) => {
+          const timestampStr = row[timestampIndex];
+          if (!timestampStr) return false;
+
+          const [datePart] = timestampStr.split(" ");
+          const [day, month, year] = datePart.split("/");
+          const recordDate = new Date(year, month - 1, day);
+          if (isNaN(recordDate.getTime())) return false;
+
+          const recordDateIST = new Date(
+            recordDate.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+          );
+          recordDateIST.setHours(0, 0, 0, 0);
+
+          console.log("Attendance - Raw timestamp:", timestampStr, "Parsed date (IST):", recordDateIST);
+
+          return (
+            recordDateIST.getTime() === today.getTime() &&
+            (!email || row[emailIndex].toLowerCase() === email.toLowerCase())
+          );
+        }).map((row) => {
+          const record = {};
+          headers.forEach((header, index) => {
+            record[header] = row[index] || "";
+          });
+          return record;
+        });
+      }
+    }
+
+    // Process Out sheet (OUT records)
+    let outRecords = [];
+    if (outRows.length > 1) {
+      const headers = outRows[0];
+      console.log("Out sheet headers:", headers);
+
+      const emailIndex = headers.findIndex(
+        (header) => header && header.toLowerCase() === "email"
+      );
+      const timestampIndex = headers.findIndex(
+        (header) => header && header.toLowerCase() === "timestamp"
+      );
+      const entryTypeIndex = headers.findIndex(
+        (header) => header && header.toLowerCase() === "entrytype"
+      );
+      const siteIndex = headers.findIndex(
+        (header) => header && header.toLowerCase() === "site"
+      );
+
+      if (emailIndex !== -1 && timestampIndex !== -1) {
+        outRecords = outRows.slice(1).filter((row) => {
+          const timestampStr = row[timestampIndex];
+          if (!timestampStr) return false;
+
+          const [datePart] = timestampStr.split(" ");
+          const [day, month, year] = datePart.split("/");
+          const recordDate = new Date(year, month - 1, day);
+          if (isNaN(recordDate.getTime())) return false;
+
+          const recordDateIST = new Date(
+            recordDate.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+          );
+          recordDateIST.setHours(0, 0, 0, 0);
+
+          console.log("Out - Raw timestamp:", timestampStr, "Parsed date (IST):", recordDateIST);
+
+          return (
+            recordDateIST.getTime() === today.getTime() &&
+            (!email || row[emailIndex].toLowerCase() === email.toLowerCase())
+          );
+        }).map((row) => {
+          const record = {};
+          headers.forEach((header, index) => {
+            record[header] = row[index] || "";
+          });
+          return record;
+        });
+      }
+    }
+
+    // ✅ Combine and sort by timestamp
+    const allRecords = [...attendanceRecords, ...outRecords];
+    allRecords.sort((a, b) => {
+      const timeA = a.Timestamp || a.timestamp || "";
+      const timeB = b.Timestamp || b.timestamp || "";
+      return timeA.localeCompare(timeB);
     });
 
-    const formattedRecords = records.map((row) => {
-      const record = {};
-      headers.forEach((header, index) => {
-        record[header] = row[index] || "";
-      });
-      return record;
-    });
+    console.log(`Found ${attendanceRecords.length} IN records and ${outRecords.length} OUT records`);
 
-    res.status(200).json(formattedRecords);
+    res.status(200).json(allRecords);
   } catch (error) {
     console.error(
       "Error fetching attendance records:",
@@ -365,9 +632,203 @@ app.get("/api/attendance", async (req, res) => {
 });
 
 
+// app.post("/api/attendance-Form", async (req, res) => {
+//   try {
+//     const {
+//       email,
+//       name,
+//       empCode,
+//       site,
+//       entryType,
+//       workShift,
+//       locationName,
+//       image,
+//     } = req.body;
+
+//     console.log("Received attendance data:", req.body);
+
+//     // Required fields validation
+//     if (
+//       !email ||
+//       !name ||
+//       !empCode ||
+//       !site ||
+//       !entryType ||
+//       !workShift ||
+//       !locationName
+//     ) {
+//       return res.status(400).json({ error: "All required fields must be provided" });
+//     }
+
+//     // Image upload to Cloudinary
+//     let imageUrl = null;
+//     if (image) {
+//       const fileName = `attendance_${email}_${Date.now()}`;
+//       imageUrl = await uploadToCloudinary(image, fileName);
+//       console.log("File uploaded to Cloudinary, URL:", imageUrl);
+//     }
+
+//     // IST Time (India)
+//     const now = new Date();
+//     const istTime = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+
+//     // Full Timestamp → Column A
+//     const formattedTimestamp =
+//       String(istTime.getDate()).padStart(2, "0") +
+//       "/" +
+//       String(istTime.getMonth() + 1).padStart(2, "0") +
+//       "/" +
+//       istTime.getFullYear() +
+//       " " +
+//       String(istTime.getHours()).padStart(2, "0") +
+//       ":" +
+//       String(istTime.getMinutes()).padStart(2, "0") +
+//       ":" +
+//       String(istTime.getSeconds()).padStart(2, "0");
+
+//     // Only Time → Column J
+//     const formattedTimeOnly =
+//       String(istTime.getHours()).padStart(2, "0") +
+//       ":" +
+//       String(istTime.getMinutes()).padStart(2, "0") +
+//       ":" +
+//       String(istTime.getSeconds()).padStart(2, "0");
+
+//     // ✅ Normalize entry type (convert to uppercase for comparison)
+//     const normalizedEntryType = entryType.trim().toUpperCase();
+//     console.log("Normalized Entry Type:", normalizedEntryType);
+
+//     let sheetName;
+
+//     if (normalizedEntryType === "IN") {
+//       sheetName = "Attendance";
+//     } else if (normalizedEntryType === "OUT") {
+//       sheetName = "Out";
+//     } else {
+//       console.error(`Invalid entry type: "${normalizedEntryType}"`);
+//       return res.status(400).json({
+//         error: "Invalid entryType. Must be 'In' or 'Out'",
+//         received: entryType,
+//       });
+//     }
+
+//     console.log(`Target sheet: ${sheetName}`);
+
+//     // ✅ FIX: Check if sheet exists, if not create it
+//     try {
+//       const spreadsheet = await sheets.spreadsheets.get({
+//         spreadsheetId: process.env.SPREADSHEET_ID,
+//       });
+
+//       const sheetExists = spreadsheet.data.sheets.some(
+//         (sheet) => sheet.properties.title === sheetName
+//       );
+
+//       if (!sheetExists) {
+//         console.log(`Sheet "${sheetName}" does not exist. Creating...`);
+        
+//         // Create new sheet
+//         await sheets.spreadsheets.batchUpdate({
+//           spreadsheetId: process.env.SPREADSHEET_ID,
+//           requestBody: {
+//             requests: [
+//               {
+//                 addSheet: {
+//                   properties: {
+//                     title: sheetName,
+//                   },
+//                 },
+//               },
+//             ],
+//           },
+//         });
+
+//         console.log(`✅ Sheet "${sheetName}" created successfully!`);
+
+//         // Add headers to new sheet ONLY if it's newly created
+//         const headers = [
+//           [
+//             "Timestamp",
+//             "Email",
+//             "Name",
+//             "EmpCode",
+//             "Site",
+//             "EntryType",
+//             "WorkShift",
+//             "LocationName",
+//             "ImageUrl",
+//             "Time",
+//           ],
+//         ];
+
+//         await sheets.spreadsheets.values.update({
+//           spreadsheetId: process.env.SPREADSHEET_ID,
+//           range: `'${sheetName}'!A1:J1`,
+//           valueInputOption: "RAW",
+//           requestBody: { values: headers },
+//         });
+
+//         console.log(`✅ Headers added to "${sheetName}" at row 1`);
+//       } else {
+//         console.log(`✅ Sheet "${sheetName}" already exists - appending data to next empty row`);
+//       }
+//     } catch (checkErr) {
+//       console.error("Failed to check/create sheet:", checkErr.message);
+//       return res.status(500).json({
+//         error: "Failed to process sheet",
+//         details: checkErr.message,
+//       });
+//     }
+
+//     // Safe range with single quotes
+//     const range = `'${sheetName}'!A:J`;
+
+//     // Data row (A to J)
+//     const values = [
+//       [
+//         formattedTimestamp,   // A: Full Timestamp
+//         email,                // B: Email
+//         name,                 // C: Name
+//         empCode,              // D: Emp Code
+//         site,                 // E: Site
+//         entryType,            // F: Entry Type (In/Out)
+//         workShift,            // G: Work Shift
+//         locationName,         // H: Location Name
+//         imageUrl || "",       // I: Image URL
+//         formattedTimeOnly,    // J: Only Time
+//       ],
+//     ];
+
+//     // Append to Google Sheet
+//     await sheets.spreadsheets.values.append({
+//       spreadsheetId: process.env.SPREADSHEET_ID,
+//       range: range,
+//       valueInputOption: "USER_ENTERED",
+//       requestBody: { values },
+//     });
+
+//     console.log(`✅ Success! Data recorded in "${sheetName}" sheet. Time: ${formattedTimeOnly}`);
+
+//     res.status(200).json({
+//       result: "success",
+//       message: `${
+//         normalizedEntryType === "IN" ? "Check In" : "Check Out"
+//       } successfully recorded!`,
+//       timestamp: formattedTimestamp,
+//       sheetName: sheetName,
+//     });
+//   } catch (error) {
+//     console.error("Error in attendance-Form:", error.message);
+//     if (error.stack) console.error(error.stack);
+
+//     res.status(500).json({
+//       error: "Failed to record attendance",
+//       details: error.message,
+//     });
+//   }
+// });
 
 
-// Attendance form submission endpoint
 app.post("/api/attendance-Form", async (req, res) => {
   try {
     const {
@@ -381,6 +842,9 @@ app.post("/api/attendance-Form", async (req, res) => {
       image,
     } = req.body;
 
+    console.log("Received attendance data:", req.body);
+
+    // Required fields validation
     if (
       !email ||
       !name ||
@@ -390,72 +854,184 @@ app.post("/api/attendance-Form", async (req, res) => {
       !workShift ||
       !locationName
     ) {
-      return res
-        .status(400)
-        .json({ error: "All required fields must be provided" });
+      return res.status(400).json({ error: "All required fields must be provided" });
     }
 
+    // Image upload to Cloudinary
     let imageUrl = null;
     if (image) {
       const fileName = `attendance_${email}_${Date.now()}`;
       imageUrl = await uploadToCloudinary(image, fileName);
+      console.log("File uploaded to Cloudinary, URL:", imageUrl);
     }
 
-  const now = new Date();
-const istOptions = {
-  timeZone: "Asia/Kolkata",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-  hour12: false,
-};
-const istFormatter = new Intl.DateTimeFormat("en-IN", istOptions);
-const parts = istFormatter.formatToParts(now);
+    // ────────────────────────────────────────────────
+    //           CORRECT CURRENT IST TIME (most reliable way)
+    // ────────────────────────────────────────────────
+    const now = new Date();
+    const istTime = new Date(
+      now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    );
 
-const year = parts.find((p) => p.type === "year").value;
-const month = parts.find((p) => p.type === "month").value;
-const day = parts.find((p) => p.type === "day").value;
-const hour = parts.find((p) => p.type === "hour").value;
-const minute = parts.find((p) => p.type === "minute").value;
-const second = parts.find((p) => p.type === "second").value;
+    // Full Timestamp → Column A (DD/MM/YYYY HH:MM:SS)
+    const formattedTimestamp =
+      String(istTime.getDate()).padStart(2, "0") +
+      "/" +
+      String(istTime.getMonth() + 1).padStart(2, "0") +
+      "/" +
+      istTime.getFullYear() +
+      " " +
+      String(istTime.getHours()).padStart(2, "0") +
+      ":" +
+      String(istTime.getMinutes()).padStart(2, "0") +
+      ":" +
+      String(istTime.getSeconds()).padStart(2, "0");
 
-const timestamp = `${day}/${month}/${year} ${hour}:${minute}:${second}`;
-console.log(timestamp)
+    // Only Time → Column J (HH:MM:SS)
+    const formattedTimeOnly =
+      String(istTime.getHours()).padStart(2, "0") +
+      ":" +
+      String(istTime.getMinutes()).padStart(2, "0") +
+      ":" +
+      String(istTime.getSeconds()).padStart(2, "0");
+
+    // Normalize entry type (case insensitive)
+    const normalizedEntryType = entryType.trim().toUpperCase();
+    console.log("Normalized Entry Type:", normalizedEntryType);
+
+    let sheetName;
+
+    if (normalizedEntryType === "IN") {
+      sheetName = "Attendance";
+    } else if (normalizedEntryType === "OUT") {
+      sheetName = "Out";
+    } else {
+      console.error(`Invalid entry type: "${normalizedEntryType}"`);
+      return res.status(400).json({
+        error: "Invalid entryType. Must be 'In' or 'Out'",
+        received: entryType,
+      });
+    }
+
+    console.log(`Target sheet: ${sheetName}`);
+
+    // Check if sheet exists, if not → create + add headers
+    try {
+      const spreadsheet = await sheets.spreadsheets.get({
+        spreadsheetId: process.env.SPREADSHEET_ID,
+      });
+
+      const sheetExists = spreadsheet.data.sheets.some(
+        (sheet) => sheet.properties.title === sheetName
+      );
+
+      if (!sheetExists) {
+        console.log(`Sheet "${sheetName}" does not exist. Creating...`);
+
+        // Create new sheet
+        await sheets.spreadsheets.batchUpdate({
+          spreadsheetId: process.env.SPREADSHEET_ID,
+          requestBody: {
+            requests: [
+              {
+                addSheet: {
+                  properties: {
+                    title: sheetName,
+                  },
+                },
+              },
+            ],
+          },
+        });
+
+        console.log(`✅ Sheet "${sheetName}" created successfully!`);
+
+        // Add headers only for new sheet
+        const headers = [
+          [
+            "Timestamp",
+            "Email",
+            "Name",
+            "EmpCode",
+            "Site",
+            "EntryType",
+            "WorkShift",
+            "LocationName",
+            "ImageUrl",
+            "Time",
+          ],
+        ];
+
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: process.env.SPREADSHEET_ID,
+          range: `'${sheetName}'!A1:J1`,
+          valueInputOption: "RAW",
+          requestBody: { values: headers },
+        });
+
+        console.log(`✅ Headers added to "${sheetName}" at row 1`);
+      } else {
+        console.log(`✅ Sheet "${sheetName}" already exists - appending data`);
+      }
+    } catch (checkErr) {
+      console.error("Failed to check/create sheet:", checkErr.message);
+      return res.status(500).json({
+        error: "Failed to process sheet",
+        details: checkErr.message,
+      });
+    }
+
+    // Safe range with quotes
+    const range = `'${sheetName}'!A:J`;
+
+    // Data row (columns A → J)
     const values = [
       [
-        timestamp,
-        email,
-        name,
-        empCode,
-        site,
-        entryType,
-        workShift,
-        locationName,
-        imageUrl || "",
+        formattedTimestamp,   // A
+        email,                // B
+        name,                 // C
+        empCode,              // D
+        site,                 // E
+        entryType,            // F (original case as sent)
+        workShift,            // G
+        locationName,         // H
+        imageUrl || "",       // I
+        formattedTimeOnly,    // J
       ],
     ];
 
+    // Append data to Google Sheet
     await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: "Attendance!A:I",
-      valueInputOption: "RAW",
+      spreadsheetId: process.env.SPREADSHEET_ID,
+      range: range,
+      valueInputOption: "USER_ENTERED",
       requestBody: { values },
     });
 
-    res
-      .status(200)
-      .json({ result: "success", message: "Attendance recorded successfully" });
+    console.log(
+      `✅ Success! Data recorded in "${sheetName}" | Time: ${formattedTimeOnly}`
+    );
+
+    // Final success response
+    res.status(200).json({
+      result: "success",
+      message: `${
+        normalizedEntryType === "IN" ? "Check In" : "Check Out"
+      } successfully recorded!`,
+      timestamp: formattedTimestamp,
+      time: formattedTimeOnly,
+      sheetName: sheetName,
+    });
   } catch (error) {
-    console.error("Error processing attendance:", error.message);
-    res
-      .status(500)
-      .json({ error: "Internal server error", details: error.message });
+    console.error("Error in attendance-Form:", error.message);
+    if (error.stack) console.error(error.stack);
+
+    res.status(500).json({
+      error: "Failed to record attendance",
+      details: error.message,
+    });
   }
 });
-
 
 app.get("/api/getFormData", async (req, res) => {
   try {
