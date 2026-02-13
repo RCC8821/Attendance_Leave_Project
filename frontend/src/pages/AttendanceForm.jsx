@@ -171,6 +171,7 @@ function AttendanceForm() {
 
   // ==================== USEEFFECT HOOKS ====================
   // Fetch user data on mount
+  
   useEffect(() => {
     const init = async () => {
       try {
@@ -361,46 +362,102 @@ function AttendanceForm() {
     return R * c;
   };
 
+  // const handleGetNearbyOffices = () => {
+  //   setLocationLoading(true);
+  //   if (navigator.geolocation) {
+  //     navigator.geolocation.getCurrentPosition(
+  //       (position) => {
+  //         const userLat = position.coords.latitude;
+  //         const userLng = position.coords.longitude;
+  //         console.log("Current location:", userLat, userLng);
+
+  //         const filteredOffices = offices.filter(
+  //           (office) => calculateDistance(userLat, userLng, office.lat, office.lng) <= 300
+  //         );
+  //         setNearbyOffices(filteredOffices);
+
+  //         const nearbyOfficeNames = filteredOffices.map((office) => office.name).join(", ");
+  //         setFormData((prev) => ({
+  //           ...prev,
+  //           locationName: nearbyOfficeNames || "No offices within 300m",
+  //         }));
+  //         setLocationLoading(false);
+  //       },
+  //       (error) => {
+  //         console.error("Error fetching location:", error.message);
+  //         setErrorMessage("Unable to fetch your location. Please enable geolocation.");
+  //         setFormData((prev) => ({
+  //           ...prev,
+  //           locationName: "Location access denied",
+  //         }));
+  //         setLocationLoading(false);
+  //       }
+  //     );
+  //   } else {
+  //     setErrorMessage("Geolocation is not supported by this browser.");
+  //     setFormData((prev) => ({
+  //       ...prev,
+  //       locationName: "Geolocation not supported",
+  //     }));
+  //     setLocationLoading(false);
+  //   }
+  // };
+
+
   const handleGetNearbyOffices = () => {
-    setLocationLoading(true);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const userLat = position.coords.latitude;
-          const userLng = position.coords.longitude;
-          console.log("Current location:", userLat, userLng);
+  setLocationLoading(true);
 
-          const filteredOffices = offices.filter(
-            (office) => calculateDistance(userLat, userLng, office.lat, office.lng) <= 300
-          );
-          setNearbyOffices(filteredOffices);
+  if (!navigator.geolocation) {
+    setErrorMessage("Geolocation is not supported by this browser.");
+    setFormData((prev) => ({
+      ...prev,
+      locationName: "Geolocation not supported",
+    }));
+    setLocationLoading(false);
+    return;
+  }
 
-          const nearbyOfficeNames = filteredOffices.map((office) => office.name).join(", ");
-          setFormData((prev) => ({
-            ...prev,
-            locationName: nearbyOfficeNames || "No offices within 300m",
-          }));
-          setLocationLoading(false);
-        },
-        (error) => {
-          console.error("Error fetching location:", error.message);
-          setErrorMessage("Unable to fetch your location. Please enable geolocation.");
-          setFormData((prev) => ({
-            ...prev,
-            locationName: "Location access denied",
-          }));
-          setLocationLoading(false);
-        }
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const userLat = position.coords.latitude;
+      const userLng = position.coords.longitude;
+      console.log("Current location:", userLat, userLng);
+
+      const filteredOffices = offices.filter(
+        (office) => calculateDistance(userLat, userLng, office.lat, office.lng) <= 300
       );
-    } else {
-      setErrorMessage("Geolocation is not supported by this browser.");
+
+      setNearbyOffices(filteredOffices);
+
+      let displayLocation = "";
+
+      if (filteredOffices.length > 0) {
+        // ऑफिस मिले → सिर्फ नाम दिखाओ (या जैसा पहले था वैसा रखो)
+        displayLocation = filteredOffices.map((office) => office.name).join(", ");
+      } else {
+        // कोई ऑफिस नहीं मिला → दोनों दिखाओ
+        const coords = `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
+        displayLocation = `No offices within 300m • ${coords}`;
+      }
+
       setFormData((prev) => ({
         ...prev,
-        locationName: "Geolocation not supported",
+        locationName: displayLocation,
+      }));
+
+      setLocationLoading(false);
+    },
+    (error) => {
+      console.error("Error fetching location:", error.message);
+      setErrorMessage("Unable to fetch your location. Please enable geolocation.");
+      setFormData((prev) => ({
+        ...prev,
+        locationName: "Location access denied",
       }));
       setLocationLoading(false);
     }
-  };
+  );
+};
 
   const startCamera = async () => {
     setIsCameraOpen(true);
@@ -1012,3 +1069,5 @@ function AttendanceForm() {
 }
 
 export default AttendanceForm;
+
+
