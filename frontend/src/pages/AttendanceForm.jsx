@@ -56,6 +56,8 @@ function AttendanceForm() {
     { name: "Wallia Ji Appartment/वालिया जी अपार्टमेन्‍ट", lat: 23.181771, lng: 77.432712 },
     { name: "Ahuja Ji Site/आहूजा जी साइट", lat: 23.214686, lng: 77.438693 },
     { name: "Scope College/स्‍कॉप कॉलेज", lat: 23.152594, lng: 77.478894 },
+    { name: "Udit Agarwal JI Site ", lat: 23.152594, lng: 77.478894 },
+    { name: "Udit Agarwal JI Site", lat: 23.2540, lng: 77.4496 },
   ];
 
   const isSpecificRCC = formData.site.toLowerCase() === "rcc office/आरसीसी कार्यालय".toLowerCase();
