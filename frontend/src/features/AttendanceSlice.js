@@ -1,46 +1,47 @@
-// src/features/attendance/AttendanceSlice.js
+// src/features/attendance/attendanceApi.js
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const attendanceApi = createApi({
-  reducerPath: 'attendanceApi',           // unique name for this api slice
+  reducerPath: 'attendanceApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: '/api',                      // ← adjust if your API has different base path
-    // prepareHeaders: (headers) => {
-    //   headers.set('Authorization', `Bearer ${token}`);
-    //   return headers;
-    // },
+    baseUrl: 'https://attendance-leave-project.onrender.com/api/',
+    prepareHeaders: (headers) => {
+      // Add auth token here later if needed
+      // headers.set('Authorization', `Bearer ${token}`);
+      return headers;
+    },
   }),
 
-  tagTypes: ['DropdownUsers'],            // for auto-refetching when needed
+  tagTypes: ['Attendance', 'UserData', 'Dropdown'],
 
   endpoints: (builder) => ({
 
-    // ────────────────────────────────────────────────
-    //   Get all users for dropdown (your API)
-    // ────────────────────────────────────────────────
+    // Get dropdown / user data
     getDropdownUserData: builder.query({
-      query: () => ({
-        url: '/DropdownUserData',
-        method: 'GET',
-      }),
-
-      // Optional: transform the response to make it easier to use
-      transformResponse: (response) => {
-        // response = { success: true, count: 42, data: [...] }
-        if (!response?.success) {
-          throw new Error(response?.error || 'Failed to load dropdown users');
-        }
-        return response.data || []; // return only the array of users
-      },
-
-      providesTags: ['DropdownUsers'],
+      query: () => 'DropdownUserData',
+      providesTags: ['Dropdown'],
     }),
 
-    // ────────────────────────────────────────────────
-    //   You can add more endpoints later, e.g.:
-    // ────────────────────────────────────────────────
-    // markAttendance: builder.mutation({...}),
-    // getAttendanceSummary: builder.query({...}),
+    // Get today's attendance records for one user
+    getAttendanceByEmailAndDate: builder.query({
+      query: ({ email, date }) => ({
+        url: 'attendance',
+        params: { email, date },
+      }),
+      providesTags: (result, error, { email }) => [{ type: 'Attendance', id: email }],
+    }),
+
+    // Submit attendance (Check-in / Check-out)
+    submitAttendance: builder.mutation({
+      query: (payload) => ({
+        url: 'attendance-Form',
+        method: 'POST',
+        body: payload,
+      }),
+      invalidatesTags: (result, error, payload) => [
+        { type: 'Attendance', id: payload.email },
+      ],
+    }),
 
   }),
 });
@@ -48,9 +49,7 @@ export const attendanceApi = createApi({
 // Auto-generated hooks
 export const {
   useGetDropdownUserDataQuery,
-  // useMarkAttendanceMutation,
-  // useGetAttendanceSummaryQuery,
+  useGetAttendanceByEmailAndDateQuery,
+  useLazyGetAttendanceByEmailAndDateQuery,   // ← useful for manual trigger
+  useSubmitAttendanceMutation,
 } = attendanceApi;
-
-// If you're using the older injectEndpoints style (less common now):
-// export const enhancedApi = attendanceApi.enhanceEndpoints({ ... });
