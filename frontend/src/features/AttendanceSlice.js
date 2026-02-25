@@ -4,7 +4,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 export const attendanceApi = createApi({
   reducerPath: 'attendanceApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: 'https://attendance-leave-project.onrender.com/api/',
+    baseUrl: 'https://attendance-leave-project-seven.vercel.app/api/',
     prepareHeaders: (headers) => {
       // Add auth token here later if needed
       // headers.set('Authorization', `Bearer ${token}`);

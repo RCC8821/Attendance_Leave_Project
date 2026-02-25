@@ -13,7 +13,7 @@ const AttendanceData = () => {
   useEffect(() => {
     const fetchAttendanceData = async () => {
       try {
-        const response = await fetch("https://attendance-leave-project.onrender.com/api/getAttendance-Data", {
+        const response = await fetch("https://attendance-leave-project-seven.vercel.app/api/getAttendance-Data", {
 
           method: "GET",
           headers: { "Content-Type": "application/json" },
@@ -51,7 +51,7 @@ const AttendanceData = () => {
         remarks,
       };
 
-      const response = await fetch("https://attendance-leave-project.onrender.com/api/updateAttendance", {
+      const response = await fetch("https://attendance-leave-project-seven.vercel.app/api/updateAttendance", {
 
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -61,7 +61,7 @@ const AttendanceData = () => {
         throw new Error((await response.json()).error || "Update failed");
       }
 
-      const Response = await fetch("https://attendance-leave-project.onrender.com/api/getAttendance-Data", {
+      const Response = await fetch("https://attendance-leave-project-seven.vercel.app/api/getAttendance-Data", {
 
         method: "GET",
         headers: { "Content-Type": "application/json" },

@@ -17,7 +17,7 @@ const LeaveData = () => {
   useEffect(() => {
     const fetchLeaveData = async () => {
       try {
-        const response = await fetch("https://attendance-leave-project.onrender.com/api/getFormData", {
+        const response = await fetch("https://attendance-leave-project-seven.vercel.app/api/getFormData", {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });
@@ -98,7 +98,7 @@ const LeaveData = () => {
 
       console.log("Sending payload to API:", payload);
 
-      const response = await fetch("https://attendance-leave-project.onrender.com/api/Approve-leave", {
+      const response = await fetch("https://attendance-leave-project-seven.vercel.app/api/Approve-leave", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

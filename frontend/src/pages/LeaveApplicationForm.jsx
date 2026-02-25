@@ -116,7 +116,7 @@ const LeaveApplicationForm = () => {
     const fetchEmployeeData = async () => {
       setFetchLoading(true);
       try {
-        const response = await fetch("https://attendance-leave-project.onrender.com/api/DropdownUserData");
+        const response = await fetch("https://attendance-leave-project-seven.vercel.app/api/DropdownUserData");
         const data = await response.json();
 
         if (!response.ok || !data.success) {
@@ -274,7 +274,7 @@ const LeaveApplicationForm = () => {
         approvalManager: formData.approvalManager.trim(),
       };
 
-      const response = await fetch("https://attendance-leave-project.onrender.com/api/leave-form", {
+      const response = await fetch("https://attendance-leave-project-seven.vercel.app/api/leave-form", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
